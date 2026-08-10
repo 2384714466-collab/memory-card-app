@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>文档记忆卡 · 记忆 + 刷题一体化</title>
+<!-- KaTeX 公式渲染（高数 / 线代 / 概率等）。联网时从 CDN 加载；离线则公式退化为 $...$ 原文 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" onload="window.__katexReady&&window.__katexReady()"></script>
 <style>
   :root{
     --primary:#3b82f6; --primary-light:#dbeafe; --primary-dark:#2563eb;
@@ -241,6 +244,14 @@
   .nav-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
   .nav-row .btn{flex:1;justify-content:center}
   .nav-row .nav-mid{flex:0 0 auto;min-width:72px;text-align:center;font-size:13px;color:var(--text-3);font-weight:700}
+  /* 分栏对照模式：PC / 平板大屏左右分屏，手机竖屏上下堆叠 */
+  .split-card{display:flex;gap:14px;align-items:stretch;margin-top:4px}
+  .split-pane{flex:1;min-width:0;background:#fff;border-radius:14px;padding:20px 16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column}
+  .split-pane .split-h{font-size:12px;font-weight:800;color:var(--text-3);letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .split-pane.ans .split-h{color:var(--primary)}
+  .split-pane .face{font-size:18px;font-weight:700;line-height:1.7;white-space:pre-wrap;word-break:break-word;width:100%;flex:1}
+  .split-pane .face img{max-width:100%;max-height:42vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
+  @media (max-width:680px){ .split-card{flex-direction:column} .split-pane{min-height:150px} }
 
   /* quiz */
   .q-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
@@ -262,6 +273,14 @@
   .opt.wrong .lt{background:var(--red);color:#fff;border-color:var(--red)}
   .analysis{background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius-s);padding:14px;font-size:14px;line-height:1.7;margin-top:6px}
   .analysis .lb{font-weight:800;color:var(--orange);display:block;margin-bottom:4px}
+  /* KaTeX 公式排版微调 */
+  .katex{font-size:1.04em}
+  .katex-display{margin:.45em 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+  .face .katex,.q-text .katex{font-size:1.06em}
+  /* 标签管理 */
+  .tag-rows{display:flex;flex-direction:column;gap:8px}
+  .tag-row{display:flex;gap:8px;align-items:center}
+  .tag-row .tag-lb{flex:1}
   .q-result{font-weight:800;padding:12px 14px;border-radius:var(--radius-s);margin-bottom:10px}
   .q-result.ok{background:var(--green-light);color:var(--green-dark)}
   .q-result.no{background:var(--red-light);color:var(--red)}
@@ -388,6 +407,8 @@
   .goal-row .gr-h b{font-weight:700}
   .goal-row .gr-sub{font-size:12px;color:var(--text-3);margin-top:5px}
   .goal-row .gr-sub.ok{color:var(--green-dark);font-weight:600}
+  .goal-row.gr-off{opacity:.62}
+  .goal-row.gr-off .gr-h b{font-weight:600;color:var(--text-3)}
   /* 日历 */
   .cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .cal-hd .m{font-size:15px;font-weight:800}
@@ -423,9 +444,9 @@
   .diag-ov-item .n{font-size:22px;font-weight:800}
   .diag-ov-item .l{font-size:12px;color:var(--text-3);margin-top:2px}
   .diag-section{margin:18px 0}
-  .sprint-actions{display:flex;gap:10px;margin-top:12px}
-  .sprint-actions .btn{flex:1;padding:13px;font-size:15px}
-  .sprint-actions .btn .sa-sub{display:block;font-size:11px;font-weight:500;opacity:.85;margin-top:2px}
+  .sub-addbar{display:flex;justify-content:flex-end;margin:0 0 8px}
+  .sprint-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .sprint-actions .btn{padding:9px 18px;font-size:14px}
   .diag-section h3{font-size:15px;margin:0 0 10px}
   .diag-ch{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
   .diag-ch-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -863,6 +884,7 @@ function loadDB(){
     d.meta.lastSettle=d.meta.lastSettle||null;      // 配额缓冲结算游标（最后结算到的日期）
     d.meta.planTomorrow=d.meta.planTomorrow||{cards:[],questions:[]}; // 次日复习计划：薄弱知识点 id
     d.meta.memos=d.meta.memos||{};                   // 每日学习备忘录：{YYYY-MM-DD: 文本}
+    d.meta.tags=d.meta.tags||[];                     // 自定义卡片标签（空则用默认种子）
     migratePlans(d);                                 // 旧 exams/goals → plans 一次性迁移
     // 蒙题字段兼容旧数据
     d.decks.forEach(dk=>{ if(dk.cycle===undefined)dk.cycle='standard'; (dk.questions||[]).forEach(q=>{
@@ -876,7 +898,8 @@ function loadDB(){
   return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
 }
 /* 兼容旧数据：把单一 goals + 多 exams 合并成多套独立备考计划 plans。
-   每个旧 exam → 一套带日期的计划（默认每日背50/刷100）；旧 goals → 一套「通用每日目标」（无日期）。
+   每个旧 exam → 一套「只有倒计时、不设每日目标」的计划（目标可不填，避免多套考试把目标累加翻倍）；
+   旧 goals 里真实填过的数字 → 单独一套「通用每日目标」（无日期）承载。
    迁移完成后清空旧字段，避免下次加载重复迁移。 */
 const PLAN_COLORS=['#6366f1','#0ea5e9','#f59e0b','#10b981','#ef4444','#8b5cf6'];
 function migratePlans(d){
@@ -884,10 +907,11 @@ function migratePlans(d){
   if(m.plans&&m.plans.length)return;            // 已有计划，跳过
   const plans=[];
   (m.exams||[]).forEach((e,i)=>{
-    if(e&&e.name)plans.push({id:e.id||uid(),name:e.name,date:e.date||null,cards:50,quiz:100,color:PLAN_COLORS[i%PLAN_COLORS.length]});
+    if(e&&e.name)plans.push({id:e.id||uid(),name:e.name,date:e.date||null,cards:0,quiz:0,color:PLAN_COLORS[i%PLAN_COLORS.length]});
   });
-  if(m.goals&&(m.goals.cards||m.goals.quiz)){
-    plans.push({id:uid(),name:'通用每日目标',date:null,cards:(m.goals.cards||50),quiz:(m.goals.quiz||100),color:'#64748b'});
+  const g=m.goals||{};
+  if(g.cards||g.quiz){                           // 只迁移用户真正设过的那项，另一项留空=不设置
+    plans.push({id:uid(),name:'通用每日目标',date:null,cards:g.cards||0,quiz:g.quiz||0,color:'#64748b'});
   }
   if(plans.length)m.plans=plans;
   m.exams=[];m.goals=null;                         // 迁移后清除旧字段
@@ -1409,8 +1433,11 @@ function openDeckMenu(did){
   if(cardN||canQuiz)items.push({icon:sel.active?'✕':'☑',label:sel.active?'退出批量管理':'批量管理',onclick:"selToggle()"});
   if(canQuiz)items.push({icon:'🔁',label:'重置已做状态',sub:'重做一遍题库',onclick:`resetDone('${d.id}')`});
   items.push({icon:'📥',label:'导入到本卡组',sub:'题目 / 卡片',onclick:`openImport('${d.id}')`});
+  items.push({icon:'📂',label:'移动到文件夹',sub:'整理归类到其它文件夹',onclick:`openMoveDeckMenu('${d.id}')`});
   items.push({icon:'➕',label:'手写新增卡片',sub:'可插图 / 标考点',onclick:`openNewCard('${d.id}')`});
+  items.push({icon:'➕',label:'手写新增题目',sub:'单选 / 多选 / 判断，支持公式',onclick:`openNewQuestion('${d.id}')`});
   items.push({icon:'⚙',label:'卡组设置',onclick:`openDeckSettings('${d.id}')`});
+  items.push({icon:d.archived?'📤':'📦',label:d.archived?'取消归档（重新进入复习/统计）':'归档卡组',sub:d.archived?'已归档，将重新计入':'考完即归档，不再进入复习计划/统计/诊断',onclick:`${d.archived?'unarchiveDeck':'archiveDeck'}('${d.id}')`});
   items.push({divider:true});
   items.push({icon:'📤',label:'导出此卡组',sub:'JSON / TXT / 打印清单',onclick:`openDeckExport('${d.id}')`});
   items.push({icon:'✏️',label:'重命名卡组',onclick:`editDeckName('${d.id}')`});
@@ -1433,7 +1460,7 @@ function openQuizMenu(){
 }
 /* 卡片背诵页头部：设置 / 记问题 / 默写方式 / 范围 / 顺序 —— 与刷题页「更多」结构一致 */
 function openStudyMenu(){
-  const dispMap={flip:'翻面',occlude:'遮挡',self:'自检'};
+  const dispMap={flip:'翻面',occlude:'遮挡',self:'自检',split:'对照'};
   const scopeMap={all:'全部',unstudied:'未背',easy:'简单',hard:'困难',forgot:'忘记'};
   const items=[
     {icon:'⚙',label:'背诵设置',sub:studyState.global?'退出后重进可改范围':'范围 / 标签 / 顺序 / 默写方式',onclick:"openStudyConfigFromStudy()"},
@@ -1451,6 +1478,7 @@ function openStudyDispMenu(){
     {icon:'🔄',label:'翻面',sub:studyState.display==='flip'?'当前':'',onclick:"setStudyDisplay('flip')"},
     {icon:'🙈',label:'遮挡',sub:studyState.display==='occlude'?'当前':'',onclick:"setStudyDisplay('occlude')"},
     {icon:'✍️',label:'自检',sub:studyState.display==='self'?'当前':'',onclick:"setStudyDisplay('self')"},
+    {icon:'🗂',label:'分栏对照',sub:studyState.display==='split'?'当前 · 左问题右答案，大屏对照':'左问题右答案，适合平板/电脑',onclick:"setStudyDisplay('split')"},
   ]);
 }
 function openStudyScopeMenu(){
@@ -1531,7 +1559,7 @@ function isRich(s){s=s||'';
       || /<\/(span|div|p|b|i|u|strong|em|font|a)>/i.test(s)  /* 结束标签 */
       || /<(span|div|p)\b[^<>]*>/i.test(s);        /* 富文本容器 */
 }
-function toRich(s){s=(s==null?'':String(s));return isRich(s)?s:esc(s).replace(/\n/g,'<br>');}
+function toRich(s){s=(s==null?'':String(s));const h=isRich(s)?s:esc(s).replace(/\n/g,'<br>');return renderMathHtml(h);}
 /* 长答案自动分行排版：把密集成段 / 成条的“答案”拆成多行，提升卡片阅读观感。
    - 富文本原样（交给富文本编辑器，不乱动标签）
    - 含显式换行则尊重用户自己的回车
@@ -1539,18 +1567,101 @@ function toRich(s){s=(s==null?'':String(s));return isRich(s)?s:esc(s).replace(/\
    - 长答案：句末标点(。！？；;)后、编号 / 项目符号前自动换行；明显成串的枚举(≥3个、)也分行 */
 function fmtAnswer(s){
   s=(s==null?'':String(s));
-  if(isRich(s)) return s;                          // 富文本原样输出
-  if(s.indexOf('\n')>=0) return esc(s).replace(/\n/g,'<br>');   // 尊重显式换行
+  if(isRich(s)) return renderMathHtml(s);          // 富文本原样输出（含公式渲染）
+  if(s.indexOf('\n')>=0) return renderMathHtml(esc(s).replace(/\n/g,'<br>'));   // 尊重显式换行
   let t=s.replace(/[ \t]+/g,' ').replace(/\s+/g,' ').trim();      // 仅规整空白，保留 < 等原文（结尾统一转义）
   if(!t) return '';
-  if(t.length<26) return esc(t);                  // 短答案不分行
+  if(t.length<26) return renderMathHtml(esc(t));                  // 短答案不分行
+  /* 含 LaTeX 公式时，自动分行排版很可能切断 $...$，保守处理：只转义 + 渲染公式 */
+  if(t.indexOf('$')>=0) return renderMathHtml(esc(t).replace(/\n/g,'<br>'));
   t=t.replace(/([。！？!?；;])(?=\S)/g,'$1\n');   // 句末 / 分号后换行
   t=t.replace(/(\S)(\s*[(（]?\d+[.、)）])/g,'$1\n$2');   // 编号前换行
   t=t.replace(/(\S)(\s*[①②③④⑤⑥⑦⑧⑨⑩])/g,'$1\n$2');    // 项目符号前换行
   if((t.match(/、/g)||[]).length>=3) t=t.replace(/、/g,'\n'); // 长枚举用 、 分行
   t=t.replace(/\n{2,}/g,'\n').trim();
-  return esc(t).replace(/\n/g,'<br>');
+  return renderMathHtml(esc(t).replace(/\n/g,'<br>'));
 }
+/* =================== LaTeX 公式渲染（KaTeX） =================== */
+/* 把文本按 $...$（行内）与 $$...$$（块级）切成 token，支持 \$ 转义。
+   用左→右扫描而非正则回溯，避免老旧 WebView 不支持 lookbehind 的问题。 */
+function splitMath(text){
+  const toks=[];let i=0;const n=text.length;
+  while(i<n){
+    const ch=text[i];
+    if(ch==='\\'){toks.push({t:'text',v:text.slice(i,i+2)});i+=2;continue;}
+    if(ch==='$'){
+      if(text[i+1]==='$'){                                   // $$...$$ 块级
+        const end=text.indexOf('$$',i+2);
+        if(end>=0){toks.push({t:'disp',v:text.slice(i+2,end)});i=end+2;continue;}
+        toks.push({t:'text',v:'$'});i++;continue;
+      }
+      let end=text.indexOf('$',i+1);                         // $...$ 行内
+      if(end>i+1){
+        while(end>i+1 && text[end-1]==='\\'){               // 跳过被转义的 \$
+          const e2=text.indexOf('$',end+1);
+          if(e2<0){end=-1;break;}
+          end=e2;
+        }
+      }else end=-1;
+      if(end>i+1){toks.push({t:'inline',v:text.slice(i+1,end)});i=end+1;continue;}
+      toks.push({t:'text',v:'$'});i++;continue;
+    }
+    let j=i;while(j<n && text[j]!=='\\' && text[j]!=='$')j++;
+    toks.push({t:'text',v:text.slice(i,j)});i=j;
+  }
+  return toks;
+}
+/* 在已转义 / 富文本 HTML 上渲染公式：解析进 DOM，遍历文本节点替换公式，再序列化。
+   若不联网（KaTeX 未加载）或不含 $，原样返回，不破坏任何内容。 */
+function renderMathHtml(h){
+  if(!h || h.indexOf('$')<0) return h;
+  if(typeof katex==='undefined') return h;
+  let doc;
+  try{doc=new DOMParser().parseFromString('<div>'+h+'</div>','text/html');}catch(e){return h;}
+  const root=doc.body&&doc.body.firstChild;
+  if(!root) return h;
+  walkMath(root);
+  return root.innerHTML;
+}
+function walkMath(node){
+  const kids=Array.from(node.childNodes);
+  for(const ch of kids){
+    if(ch.nodeType===3){                                    // 文本节点
+      const txt=ch.nodeValue;
+      if(!txt || txt.indexOf('$')<0) continue;
+      const toks=splitMath(txt);
+      if(toks.length===1 && toks[0].t==='text') continue;  // 无公式则不碰
+      const doc=node.ownerDocument, frag=doc.createDocumentFragment();
+      for(const tk of toks){
+        if(tk.t==='text'){ frag.appendChild(doc.createTextNode(tk.v)); continue; }
+        const node2=renderMathNode(tk.v, tk.t==='disp', doc);
+        if(node2) frag.appendChild(node2);
+        else frag.appendChild(doc.createTextNode((tk.t==='disp'?'$$':'$')+tk.v+(tk.t==='disp'?'$$':'$')));
+      }
+      node.replaceChild(frag,ch);
+    }else if(ch.nodeType===1){                              // 元素节点：递归
+      walkMath(ch);
+    }
+  }
+}
+function renderMathNode(tex,display,doc){
+  try{
+    const html=katex.renderToString(tex,{displayMode:display,throwOnError:false,errorColor:'#e11d48'});
+    const tmp=doc.createElement('span');tmp.innerHTML=html;return tmp.firstChild;
+  }catch(e){ return null; }
+}
+/* 纯文本（题干 / 选项 / 解析）渲染公式：先转义再渲染 */
+function md(s){ return renderMathHtml(esc(s==null?'':String(s)).replace(/\n/g,'<br>')); }
+/* KaTeX 慢于首屏渲染时，加载完成后重渲染当前视图，避免一开始显示 $...$ 原文 */
+window.__katexReady=function(){
+  const v=document.querySelector('.view.active');if(!v)return;
+  const id=v.id.replace('view-','');
+  if(id==='study')renderStudy();
+  else if(id==='quiz')renderQuiz();
+  else if(id==='detail')renderDetail();
+  else if(id==='home')renderHome();
+  else if(id==='diagnosis')renderDiagnosis();
+};
 /* ---- 富文本编辑器（图片 + 一级/二级考点高亮）---- */
 let __ceFileInput=null;
 function imgToDataURL(file,maxW,cb){
@@ -1587,7 +1698,22 @@ function ceFieldHTML(editId,valHTML,oninput){
   const oi=oninput?` oninput="${oninput}"`:'';
   return `<div class="ce-field"><div class="ce-bar">
     <button type="button" class="btn btn-ghost btn-xs" onclick="cePickImage(this)">🖼 图片</button>
+    <button type="button" class="btn btn-ghost btn-xs" onclick="ceInsertLatex(this)" title="插入 LaTeX 公式，如 $\\int_a^b f(x)dx$">Σ 公式</button>
   </div><div class="ce-edit" id="${editId}" contenteditable="true"${oi}>${valHTML||''}</div></div>`;
+}
+/* 在光标处插入 LaTeX 占位（被 contenteditable 保存为纯文本 $...$，渲染时由 KaTeX 显示） */
+function ceInsertLatex(btn){
+  const ed=btn.closest('.ce-field')&&btn.closest('.ce-field').querySelector('.ce-edit');
+  if(!ed){toast('未找到编辑区');return;}
+  ed.focus();
+  const tpl='$  $';const L=tpl.length;
+  const sel=window.getSelection&&document.getSelection?document.getSelection():null;
+  if(sel&&sel.rangeCount&&ed.contains(sel.anchorNode)){
+    const r=sel.getRangeAt(0);r.deleteContents();
+    const span=document.createElement('span');span.textContent=tpl;
+    r.insertNode(span);
+    try{const nr=document.createRange();nr.setStart(span.firstChild,1);nr.setEnd(span.firstChild,L-1);sel.removeAllRanges();sel.addRange(nr);}catch(e){}
+  }else{ ed.insertAdjacentHTML('beforeend','<span>'+tpl+'</span>'); }
 }
 function todayKey(){return new Date().toISOString().slice(0,10);}
 function now(){return Date.now();}
@@ -1690,15 +1816,69 @@ const TYPE_LABEL={single:'单选',multiple:'多选',judge:'判断'};
 const TYPE_BADGE={single:'badge-s',multiple:'badge-m',judge:'badge-j'};
 /* 卡片背诵「默写方式」标签 */
 const DISP_LABEL={flip:'翻面',occlude:'遮挡',self:'自检'};
-const DISP_BADGE={flip:'badge-disp',occlude:'badge-disp',self:'badge-disp'};
+const DISP_BADGE={flip:'badge-disp',occlude:'badge-disp',self:'badge-disp',split:'badge-disp'};
 /* 卡片标签 / 重难点分级 */
-const CARD_TAGS=[
+/* 卡片标签：可自定义（增 / 改名 / 改图标 / 删除）。默认种子写入 DB.meta.tags 持久化，
+   卡片 / 批量标签 / 背诵设置 全部读同一来源，标签改名后各处自动同步。 */
+const DEFAULT_TAGS=[
   {key:'freq',   icon:'⭐', label:'高频考点'},
   {key:'confuse',icon:'⚠', label:'易混淆'},
   {key:'big',    icon:'🔴', label:'必背大题'},
   {key:'choice', icon:'🟡', label:'选择考点'}
 ];
+let CARD_TAGS=(DB.meta&&DB.meta.tags&&DB.meta.tags.length)?DB.meta.tags:DEFAULT_TAGS.slice();
+function syncTags(){DB.meta.tags=CARD_TAGS.slice();}
 function tagMeta(key){return CARD_TAGS.find(t=>t.key===key)||{key,icon:'🏷',label:key};}
+/* ---- 标签自定义管理 ---- */
+function openTagManager(){renderTagManager();showModal();}
+function renderTagManager(){
+  const rows=CARD_TAGS.map(t=>`<div class="tag-row">
+    <input class="inp tag-ic" value="${esc(t.icon)}" maxlength="2" style="width:46px;text-align:center" onchange="tagField('${t.key}','icon',this.value)">
+    <input class="inp tag-lb" value="${esc(t.label)}" onchange="tagField('${t.key}','label',this.value)">
+    <button class="btn btn-danger btn-xs" type="button" onclick="tagDel('${t.key}')" title="删除标签">🗑</button>
+  </div>`).join('');
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">🏷 自定义标签</div>
+    <p class="muted" style="margin:2px 0 10px">标签用于卡片分类与背诵筛选。改名 / 改图标会<b>同步</b>到所有已标记的卡片与背诵设置；删除会一并移除卡片上的该标签。</p>
+    <div class="tag-rows">${rows||'<div class="muted">还没有标签</div>'}</div>
+    <div class="pv-field" style="margin-top:12px"><label>新增标签</label>
+      <div class="row" style="gap:8px">
+        <input class="inp" id="tag-new-ic" value="🏷" maxlength="2" style="width:48px;text-align:center">
+        <input class="inp" id="tag-new-lb" placeholder="标签名，如：二重积分 / 泰勒展开" onkeydown="if(event.key==='Enter')tagAdd()">
+        <button class="btn btn-primary btn-sm" type="button" onclick="tagAdd()">＋ 添加</button>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="hideModal()">完成</button></div>`;
+}
+function tagField(key,field,val){
+  const t=CARD_TAGS.find(x=>x.key===key);if(!t)return;
+  t[field]=val;syncTags();save();
+  if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
+  if(window.__sc)renderStudyConfig();
+  if(window.__ct)renderCardTags();
+  if(window.__bt)renderBatchTagModal();
+  renderTagManager();
+}
+function tagAdd(){
+  const ic=document.getElementById('tag-new-ic'),lb=document.getElementById('tag-new-lb');
+  if(!lb)return;const label=lb.value.trim();if(!label){toast('请输入标签名');return;}
+  const icon=ic?ic.value.trim()||'🏷':'🏷';
+  CARD_TAGS.push({key:'t'+Date.now().toString(36),icon,label});syncTags();save();
+  renderTagManager();toast('已添加标签');
+  if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
+}
+function tagDel(key){
+  if(CARD_TAGS.length<=1){toast('至少保留一个标签');return;}
+  if(!confirm('删除该标签？所有卡片上对应的标签也会一并移除。'))return;
+  CARD_TAGS=CARD_TAGS.filter(t=>t.key!==key);syncTags();
+  DB.decks.forEach(d=>(d.cards||[]).forEach(c=>{if(c.tags)c.tags=c.tags.filter(x=>x!==key);}));
+  save();renderTagManager();
+  if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
+  if(window.__sc)renderStudyConfig();
+  if(window.__ct)renderCardTags();
+  if(window.__bt)renderBatchTagModal();
+  toast('已删除标签');
+}
 
 /* =================== ROUTER =================== */
 let cur={deckId:null,sub:'cards',collapsed:{},showEmpty:false};
@@ -1758,7 +1938,7 @@ function pushDeckUndo(id,label,key,before){
 /* =================== HOME =================== */
 function dueCards(){
   const t=now();let n=0;
-  DB.decks.forEach(d=>(d.cards||[]).forEach(c=>{if((c.nextReview||0)<=t)n++;}));
+  activeDecks().forEach(d=>(d.cards||[]).forEach(c=>{if((c.nextReview||0)<=t)n++;}));
   return n;
 }
 function renderHome(){
@@ -1772,11 +1952,16 @@ function renderHome(){
   document.getElementById('hm-quiz-acc').textContent=q+'%';
   renderHomePlan();
   const list=document.getElementById('deck-list');
-  if(!DB.decks.length){list.innerHTML='<div class="empty"><div class="em">📭</div>还没有卡组，导入文档或新建一个吧</div>';return;}
   const secs=[];
   DB.folders.forEach(f=>secs.push(folderSectionHtml(f.id,f.name,decksInFolder(f.id),false)));
   const unc=uncategorizedDecks();
   if(unc.length)secs.push(folderSectionHtml('none','未分组',unc,true));
+  if(!secs.length){
+    list.innerHTML='<div class="empty"><div class="em">📭</div>还没有卡组，导入文档或新建一个吧</div>';
+    const bs=document.getElementById('backup-status');
+    if(bs)bs.textContent=backupStatusText();
+    return;
+  }
   list.innerHTML=secs.join('');
   const bs=document.getElementById('backup-status');
   if(bs)bs.textContent=backupStatusText();
@@ -1789,9 +1974,10 @@ function deckStarHtml(d){
 }
 function deckCardHtml(d){
   const mode=(d.questions&&d.questions.length)?'q':'c';
-  return `<div class="deck" onclick="openDeck('${d.id}')">
+  const archBadge=d.archived?'<span class="tag" style="background:#e2e8f0;color:#64748b">📦 已归档</span>':'';
+  return `<div class="deck" onclick="openDeck('${d.id}')" style="${d.archived?'opacity:.7':''}">
     <div class="ic ${mode==='q'?'':' '}" style="background:${mode==='q'?'var(--green-light)':'var(--primary-light)'}">${mode==='q'?'📝':'🃏'}</div>
-    <div class="info"><div class="nm">${esc(d.name)} ${deckStarHtml(d)}</div>
+    <div class="info"><div class="nm">${esc(d.name)} ${deckStarHtml(d)} ${archBadge}</div>
       <div class="mt">${d.cards?d.cards.length:0} 卡片 · ${d.questions?d.questions.length:0} 题目
         ${d.questions&&d.questions.some(q=>q.inWrongBook)?'· <span style="color:var(--red)">'+d.questions.filter(q=>q.inWrongBook).length+' 错题</span>':''}</div>
       ${doneBarHtml(d)}
@@ -1825,11 +2011,11 @@ function folderSectionHtml(fid,name,decks,isNone){
   </div>`;
 }
 function memAccuracy(){
-  let t=0,c=0;DB.decks.forEach(d=>(d.cards||[]).forEach(x=>{t+=x.reviews||0;c+=x.correct||0;}));
+  let t=0,c=0;activeDecks().forEach(d=>(d.cards||[]).forEach(x=>{t+=x.reviews||0;c+=x.correct||0;}));
   return t?Math.round(c/t*100):0;
 }
 function quizAccuracy(){
-  let t=0,c=0;DB.decks.forEach(d=>{const q=d.quiz||{};t+=q.total||0;c+=q.correct||0;});
+  let t=0,c=0;activeDecks().forEach(d=>{const q=d.quiz||{};t+=q.total||0;c+=q.correct||0;});
   return t?Math.round(c/t*100):0;
 }
 function doneBarHtml(d,prefix){
@@ -1857,7 +2043,7 @@ function startToday(){
   settleBuffer();                                  // 进入复习前先结算配额缓冲
   // 汇总所有卡组的到期卡片 + 错题，直接进入复习，不跳编辑页
   const dueCards=[];const wrongQs=[];
-  DB.decks.forEach(d=>{
+  activeDecks().forEach(d=>{
     (d.cards||[]).forEach(c=>{if((c.nextReview||0)<=now())dueCards.push(c);});
     (d.questions||[]).forEach(q=>{if(q.inWrongBook)wrongQs.push(q);});
   });
@@ -2235,6 +2421,24 @@ function delFolder(id){
 }
 function decksInFolder(fid){return DB.decks.filter(d=>d.folderId===fid && DB.folders.some(f=>f.id===fid));}
 function uncategorizedDecks(){return DB.decks.filter(d=>!d.folderId || !DB.folders.some(f=>f.id===d.folderId));}
+/* 卡组移动到其它文件夹：fid 为 null 表示移入「未分组」 */
+function openMoveDeckMenu(did){
+  const d=getDeck(did);if(!d)return;
+  const items=[
+    {icon:'➖',label:'未分组（移出文件夹）',sub:d.folderId?'当前所在':'',onclick:`moveDeckToFolder('${did}',null)`},
+  ];
+  DB.folders.forEach(f=>{
+    items.push({icon:'📂',label:f.name,sub:(d.folderId===f.id?'当前所在':''),onclick:`moveDeckToFolder('${did}','${f.id}')`});
+  });
+  if(!DB.folders.length)items.push({icon:'ℹ️',label:'还没有文件夹，先去「我的卡组」新建',disabled:true});
+  openSheet('移动到文件夹',items);
+}
+function moveDeckToFolder(did,fid){
+  const d=getDeck(did);if(!d)return;
+  d.folderId=(fid===null||fid==='null'||fid==='')?null:fid;
+  closeSheet();save();renderHome();
+  toast('已移动卡组'+(d.folderId?'':'到「未分组」'));
+}
 function moveFolder(id,dir){
   const i=DB.folders.findIndex(x=>x.id===id);if(i<0)return;
   const j=i+dir;if(j<0||j>=DB.folders.length)return;
@@ -2348,6 +2552,10 @@ function toggleFolder(id,e){
 
 /* =================== DECK DETAIL =================== */
 function getDeck(id){return DB.decks.find(d=>d.id===id);}
+/* 未归档的卡组（归档卡组不进入复习计划 / 统计 / 诊断等未来数据，但仍可在「我的卡组」查看） */
+function activeDecks(){return DB.decks.filter(d=>!d.archived);}
+function archiveDeck(id){const d=getDeck(id);if(d){d.archived=true;save();renderHome();toast('已归档：'+d.name);}}
+function unarchiveDeck(id){const d=getDeck(id);if(d){d.archived=false;save();renderHome();toast('已取消归档：'+d.name);}}
 function renderDetail(){
   const d=getDeck(cur.deckId);const v=document.getElementById('view-detail');
   if(!d){go('home');return;}
@@ -2379,7 +2587,7 @@ function renderDetail(){
     <div class="mode-cards">
       <div class="mode-card m1" onclick="openStudyConfig('${d.id}')"><span class="em">🃏</span>进入卡片背诵</div>
       ${canQuiz?`<div class="mode-card m2" onclick="openQuizConfig('${d.id}')"><span class="em">📝</span>进入刷题模式</div>`
-                :`<div class="mode-card" style="opacity:.5;cursor:not-allowed" onclick="toast('该卡组没有题目，导入题库文档可开启刷题')"><span class="em">📝</span>进入刷题模式</div>`}
+                :`<div class="mode-card m2" style="opacity:.62" onclick="openNewQuestion('${d.id}')" title="该卡组还没有题目，点这里手写录一道"><span class="em">📝</span>还没有题目 · 去新增</div>`}
     </div>
 
     <div class="tabs2">
@@ -2388,14 +2596,23 @@ function renderDetail(){
     </div>
     <div id="detail-sub"></div>`;
   if(actSub){cur.sub=actSub;renderDetailSub(actSub);}
-  else document.getElementById('detail-sub').innerHTML='<div class="empty"><div class="em">📭</div>该卡组暂无内容</div>';
+  else document.getElementById('detail-sub').innerHTML=`<div class="empty"><div class="em">📭</div>该卡组暂无内容
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button>
+      <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入</button>
+    </div></div>`;
 }
 function switchTab(_,sub){cur.sub=sub;if(sel.active)sel.ids.clear();document.querySelectorAll('#view-detail .tabs2 .t').forEach(t=>t.classList.remove('active'));
   event.target.classList.add('active');renderDetailSub(sub);}
 function renderDetailSub(sub){
   const d=getDeck(cur.deckId);const box=document.getElementById('detail-sub');
   if(sub==='cards'){
-    if(!d.cards.length){box.innerHTML='<div class="empty"><div class="em">🃏</div>暂无卡片</div>';return;}
+    if(!d.cards.length){box.innerHTML=`<div class="empty"><div class="em">🃏</div>暂无卡片
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button>
+        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入卡片</button>
+      </div></div>`;return;}
     const empties=d.cards.filter(isCardEmpty);
     const cards=d.cards.filter(c=>!isCardEmpty(c));
     const bar=sel.active?batchBarHtml():'';
@@ -2406,16 +2623,20 @@ function renderDetailSub(sub){
         <button class="btn btn-ghost" onclick="clearEmptyCards('${d.id}')">🧹 清空空白卡</button></div>`;
     }
     const listSrc=cur.showEmpty?d.cards:cards;
-    box.innerHTML=bar+note+listSrc.map(c=>{
+    box.innerHTML=bar+note+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button></div>`+listSrc.map(c=>{
       const on=sel.ids.has(c.id);const ec=isCardEmpty(c)?' empty-card':'';
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${c.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('card','${d.id}','${c.id}')" title="更多操作">⋯</button></div>`;
       return `<div class="li${on?' sel':''}${ec}" data-card-id="${c.id}" onclick="studyCardFromList(event,'${d.id}','${c.id}')">${cb}<div class="lt"><div class="a-line"><div class="a selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="front">${toRich(face(c))}</div><span class="li-badges">${listExtrasHtml(c)}</span></div><div class="b selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="back">${toRich(back(c))}</div>${tagBadges(c)}</div>${acts}</div>`;
     }).join('');
   }else if(sub==='questions'){
-    if(!d.questions.length){box.innerHTML='<div class="empty"><div class="em">📝</div>暂无题目</div>';return;}
+    if(!d.questions.length){box.innerHTML=`<div class="empty"><div class="em">📝</div>暂无题目
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button>
+        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入题库</button>
+      </div></div>`;return;}
     const bar=sel.active?batchBarHtml():'';
-    box.innerHTML=bar+d.questions.map(q=>{
+    box.innerHTML=bar+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button></div>`+d.questions.map(q=>{
       const on=sel.ids.has(q.id);
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${q.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('question','${d.id}','${q.id}')" title="更多操作">⋯</button></div>`;
@@ -2566,6 +2787,7 @@ function renderBatchTagModal(){
     <p class="muted" style="margin:4px 0 10px">对选中的 ${sel.ids.size} 张卡片执行：</p>
     <div style="margin-bottom:10px">${opHtml}</div>
     <div style="margin-bottom:14px">${tagHtml}</div>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-bottom:12px">🏷 管理标签</button>
     <div class="row" style="gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
       <button class="btn btn-primary" onclick="btApply()">应用</button>
@@ -2717,6 +2939,7 @@ function renderCardTags(){
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">🏷 卡片标签</div>
     <div class="pv-field"><label>选择标签（可多选）</label>${chips}</div>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-top:-4px">🏷 管理标签</button>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="ctSave()">保存</button>
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
@@ -2775,7 +2998,7 @@ function openNewCard(id){
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">➕ 新增卡片 · ${esc(d.name)}</div>
     <p class="muted" style="margin:2px 0 4px">可直接插入本地图片（结构图/流程图/几何图/思维导图），或选中文字后标记考点。</p>
-    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 选中文字后底部弹出工具栏，可 <b>加粗 / 斜体 / 下划线</b> 或上 <b>荧光</b>；黄色荧光会作为背诵自检的判分关键词。</div>
+    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 支持 <b>LaTeX 公式</b>：用 <code>$…$</code> 包围（如 <code>$\\int_a^b f(x)dx$</code>），点击「Σ 公式」可快速插入；高数/线代/概率公式均可正常展示。选中文字后底部弹出工具栏，可 <b>加粗 / 斜体 / 下划线</b> 或上 <b>荧光</b>。</div>
     <div class="pv-field"><label>正面（问题 / 提示）</label>${ceFieldHTML('ncf','')}</div>
     <div class="pv-field"><label>背面（答案 / 图示）</label>${ceFieldHTML('ncb','')}</div>
     <div class="pv-field"><label>📖 拓展笔记</label>${ceFieldHTML('nce','')}
@@ -2864,6 +3087,51 @@ function saveQuestionEdit(id,qid){
   if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
   q.type=type;q.question=question;q.options=optLines;q.analysis=analysis;q.answer=answer;
   save();hideModal();renderDetailSub(cur.sub||'questions');renderDetail();toast('题目已更新');
+}
+/* 手写新增题目（与「手写新增卡片」对称；复用 qe-* 表单结构与 qeRefresh 答案联动） */
+function openNewQuestion(id){
+  const d=getDeck(id);if(!d)return;
+  window.__qe_ans='';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">➕ 新增题目 · ${esc(d.name)}</div>
+    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 选项每行一个，自动编号 A/B/C/D；判断题无需填选项。题干 / 选项 / 解析均支持 <b>LaTeX 公式</b>，用 <code>$…$</code> 包围（如 <code>$P(A\\mid B)=\\frac{P(AB)}{P(B)}$</code>）。</div>
+    <div class="pv-field"><label>题型</label>
+      <select id="qe-type" onchange="qeRefresh()">
+        <option value="single" selected>单选</option>
+        <option value="multiple">多选</option>
+        <option value="judge">判断</option>
+      </select></div>
+    <div class="pv-field"><label>题干</label><textarea id="qe-question" rows="3" placeholder="把题目写在这里…"></textarea></div>
+    <div class="pv-field"><label>选项（每行一个）</label><textarea id="qe-options" rows="5" placeholder="选项内容一&#10;选项内容二&#10;选项内容三&#10;选项内容四" oninput="qeRefresh()"></textarea></div>
+    <div class="pv-field"><label>正确答案</label><div id="qe-answer"></div></div>
+    <div class="pv-field"><label>解析（选填）</label><textarea id="qe-analysis" rows="3" placeholder="考点、易错点、答题思路…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveNewQuestion('${id}',false)">保存</button>
+      <button class="btn btn-outline" onclick="saveNewQuestion('${id}',true)">保存并继续加</button>
+      <button class="btn btn-ghost" onclick="hideModal()">取消</button>
+    </div>`;
+  qeRefresh();showModal();
+}
+function saveNewQuestion(id,again){
+  const d=getDeck(id);if(!d)return;
+  const type=document.getElementById('qe-type').value;
+  const question=document.getElementById('qe-question').value.trim();
+  const optLines=document.getElementById('qe-options').value.split('\n').map(s=>s.trim()).filter(s=>s);
+  const analysis=document.getElementById('qe-analysis').value.trim();
+  let answer;
+  if(type==='judge'){answer=document.getElementById('qe-answer-sel')?document.getElementById('qe-answer-sel').value:'正确';}
+  else{
+    const picked=Array.from(document.querySelectorAll('#qe-answer input[name="qe-ans"]:checked')).map(e=>e.value);
+    answer=type==='multiple'?picked.sort().join(''):(picked[0]||'');
+  }
+  if(!question){toast('题干不能为空');return;}
+  if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
+  const q={id:uid(),type,question,options:type==='judge'?['正确','错误']:optLines,answer,analysis,
+    done:false,inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0,fav:false};
+  d.questions=d.questions||[];d.questions.push(q);save();
+  if(again){openNewQuestion(id);toast('已添加，继续录入');}
+  else{hideModal();toast('已添加 1 道题目');}
+  cur.sub='questions';renderDetail();
 }
 
 /* =================== STUDY (Ebbinghaus) =================== */
@@ -2959,7 +3227,8 @@ function renderStudyConfig(){
     <div class="pv-field"><label>范围</label>
       <div class="queue-seg">${scopeChip('all','全部',n)}${scopeChip('unstudied','未背',un)}${scopeChip('easy','简单',ez)}${scopeChip('hard','困难',hd)}${scopeChip('forgot','忘记',fg)}</div></div>
     <div class="pv-field"><label>标签（可多选 / 可不选）</label>
-      <div class="cfg-types">${chips||'<span class="muted">暂无可选标签</span>'}</div></div>
+      <div class="cfg-types">${chips||'<span class="muted">暂无可选标签</span>'}</div>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-top:6px">🏷 管理标签</button></div>
     <div class="pv-field"><label>顺序</label>
       <div class="queue-seg">${ordChip('seq','顺序')}${ordChip('shuffle','乱序')}</div></div>
     <div class="pv-field"><label>默写方式</label>
@@ -3029,7 +3298,7 @@ function renderStudy(){
       <button class="btn btn-primary" style="margin-top:18px" onclick="goBack()">返回</button></div>`;return;
   }
   const card=q[studyState.idx];const total=q.length;
-  const dispLabelMap={flip:'翻面',occlude:'遮挡',self:'自检'};
+  const dispLabelMap={flip:'翻面',occlude:'遮挡',self:'自检',split:'对照'};
   const dispKey=studyState.display||'flip';
   v.innerHTML=`
     <div class="row between" style="margin-bottom:10px;gap:8px">
@@ -3042,7 +3311,7 @@ function renderStudy(){
     <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${studyState.idx+1}/${total} 张卡</span>
       <div class="q-bar"><div style="width:${Math.round(studyState.idx/total*100)}%"></div></div></div>
     ${studyCardHtml(card)}
-    ${studyState.flipped?studyFeedbackHtml(card):''}
+    ${(studyState.flipped||dispKey==='split')?studyFeedbackHtml(card):''}
     <div class="nav-row">
       <button class="btn btn-ghost" ${studyState.idx>0?'':'disabled'} onclick="studyPrev()">◀ 上一张</button>
       <span class="nav-mid">${studyState.idx+1} / ${total}</span>
@@ -3053,6 +3322,20 @@ function linksNoteHtml(card){return linksHtml(card.links)+noteHtml(card.note);}
 function studyCardExtras(card){return studyExtHtml(card)+linksHtml(card.links)+noteHtml(card.note);}
 function studyCardHtml(card){
   const disp=studyState.display;
+  // 分栏对照模式：左问题右答案，同时可见，适合大屏对照背诵
+  if(disp==='split'){
+    return `<div class="split-card">
+      <div class="split-pane">
+        <div class="split-h">📋 问题</div>
+        <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front">${toRich(face(card))}</div>
+      </div>
+      <div class="split-pane ans">
+        <div class="split-h">✅ 答案</div>
+        <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>
+      </div>
+    </div>
+    ${studyCardExtras(card)}`;
+  }
   const fld = disp==='self' ? 'front' : (studyState.flipped?'back':'front');
   const faceAttr=`class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="${fld}"`;
   if(disp==='occlude'){
@@ -3244,7 +3527,7 @@ function openQuizConfig(id){
 function qcTypesArr(){const c=window.__qc;return c.types===null?['single','multiple','judge']:c.types;}
 function qcQuestionList(){
   const c=window.__qc;
-  if(c.id==='__all__'){const arr=[];DB.decks.forEach(d=>(d.questions||[]).forEach(q=>arr.push(q)));return arr;}
+  if(c.id==='__all__'){const arr=[];activeDecks().forEach(d=>(d.questions||[]).forEach(q=>arr.push(q)));return arr;}
   const d=getDeck(c.id);return d?d.questions:[];
 }
 function renderQuizConfig(){
@@ -3300,7 +3583,7 @@ function qcStart(){
   if(c.fromQuiz){
     const cfg={range:c.range,types,order:c.order,shuffle:c.shuffle};
     if(quiz.global){
-      let qs=[];DB.decks.forEach(d=>(d.questions||[]).forEach(q=>{
+      let qs=[];activeDecks().forEach(d=>(d.questions||[]).forEach(q=>{
         if(cfg.range==='undone'&&q.done)return;
         if(cfg.range==='wrong'&&!q.inWrongBook)return;
         if(cfg.range==='guess'&&!q.guess)return;
@@ -3416,7 +3699,7 @@ function optRow(q,text,dispIdx,isJudge,origIdx){
   const badge=isJudge?(text==='正确'?'✔':'✖'):letter;
   const clickable=quiz.submitted?'':`onclick="toggleOpt('${q.id}',${isJudge?`'${text}'`:origIdx},${isJudge})"`;
   const shown=isJudge?text:(letter+' . '+esc(text));
-  return `<div class="${cls}" ${clickable}><span class="lt">${badge}</span><span>${esc(text)}</span></div>`;
+  return `<div class="${cls}" ${clickable}><span class="lt">${badge}</span><span>${md(text)}</span></div>`;
 }
 function toggleOpt(qid,val,isJudge){
   const q=quiz.queue[quiz.idx];
@@ -3560,7 +3843,15 @@ function settleBuffer(){
   }
   m.lastSettle=yesterdayKey();                                        // 已结算到昨天（今天不参与）
   m.backlog.cards=Math.max(0,Math.round(m.backlog.cards));m.backlog.quiz=Math.max(0,Math.round(m.backlog.quiz));
+  if(baseC===0&&m.backlog.cards){m.backlog.cards=0;changed=true;}     // 目标未设置 → 清掉历史积压，不再催
+  if(baseQ===0&&m.backlog.quiz){m.backlog.quiz=0;changed=true;}
   if(changed)save();
+}
+/* 计划的每日目标文案：两项都没填就显示「仅倒计时」 */
+function planGoalLabel(p){
+  const a=p&&p.cards?`背${p.cards}`:'', b=p&&p.quiz?`刷${p.quiz}`:'';
+  if(!a&&!b)return '未设每日目标';
+  return '每日 '+[a,b].filter(Boolean).join('/');
 }
 /* 计划按日期升序（无日期排最后） */
 function planListSorted(){return (DB.meta.plans||[]).slice().sort((a,b)=>{
@@ -3582,18 +3873,26 @@ function goalBarsHtml(){
   const tk=todayKey();
   const c=DB.meta.cardDays[tk]||0, qz=DB.meta.quizDays[tk]||0;
   const baseC=todayBase('cards'),baseQ=todayBase('quiz');
-  const bufC=todayBuffer('cards'),bufQ=todayBuffer('quiz');
+  const bufC=baseC?todayBuffer('cards'):0, bufQ=baseQ?todayBuffer('quiz'):0;   // 未设目标的那项不结转
   const tgtC=baseC+bufC, tgtQ=baseQ+bufQ;
-  if(tgtC===0&&tgtQ===0)return `<div class="gr-empty">还没有设定备考计划 📝 去「规划」页添加考研 / 期末等目标，这里会显示每日进度。</div>`;
+  const hasPlan=(DB.meta.plans||[]).length>0;
+  if(tgtC===0&&tgtQ===0)return hasPlan
+    ? `<div class="gr-empty">当前计划只做考试倒计时，没设每日目标 🎯 这样也完全可以；想看进度条，就在「规划」页编辑计划补上每日背卡 / 刷题数量。<br><span class="muted sm">今日已背 ${c} 张 · 已刷 ${qz} 题（不设目标也照常记录）</span></div>`
+    : `<div class="gr-empty">还没有设定备考计划 📝 去「规划」页添加考研 / 期末等目标，这里会显示每日进度。</div>`;
   const pc=c===0?0:Math.min(100,Math.round(c/Math.max(1,tgtC)*100));
   const pq=qz===0?0:Math.min(100,Math.round(qz/Math.max(1,tgtQ)*100));
   const cSub=c>=baseC?`<div class="gr-sub ok">🎉 基础背卡目标已达成（${c}/${baseC}）${bufC?` · 积压剩 ${Math.max(0,bufC-(c-baseC))}`:''}</div>`:`<div class="gr-sub">还差 ${Math.max(0,baseC-c)} 张卡达成基础目标</div>`;
   const qSub=qz>=baseQ?`<div class="gr-sub ok">🎉 基础刷题目标已达成（${qz}/${baseQ}）${bufQ?` · 积压剩 ${Math.max(0,bufQ-(qz-baseQ))}`:''}</div>`:`<div class="gr-sub">还差 ${Math.max(0,baseQ-qz)} 题达成基础目标</div>`;
-  const bufHint=(bufC||bufQ)?`<div class="gr-buf">📦 含未完成结转：背卡 +${bufC} · 刷题 +${bufQ}（已自动分摊到今天，多学即还债）</div>`:'';
-  return bufHint+`<div class="goal-row"><div class="gr-h"><span>🃏 每日背卡</span><b>${c}/${tgtC}</b>${bufC?`<i class="gr-tag">含结转 ${bufC}</i>`:''}</div>
-      <div class="q-bar"><div style="width:${pc}%"></div></div>${cSub}</div>
-    <div class="goal-row"><div class="gr-h"><span>📝 每日刷题</span><b>${qz}/${tgtQ}</b>${bufQ?`<i class="gr-tag">含结转 ${bufQ}</i>`:''}</div>
-      <div class="q-bar"><div style="width:${pq}%"></div></div>${qSub}</div>`;
+  const bufHint=(bufC||bufQ)?`<div class="gr-buf">📦 含未完成结转：${bufC?`背卡 +${bufC}`:''}${(bufC&&bufQ)?' · ':''}${bufQ?`刷题 +${bufQ}`:''}（已自动分摊到今天，多学即还债）</div>`:'';
+  const rowC=tgtC>0
+    ? `<div class="goal-row"><div class="gr-h"><span>🃏 每日背卡</span><b>${c}/${tgtC}</b>${bufC?`<i class="gr-tag">含结转 ${bufC}</i>`:''}</div>
+      <div class="q-bar"><div style="width:${pc}%"></div></div>${cSub}</div>`
+    : `<div class="goal-row gr-off"><div class="gr-h"><span>🃏 每日背卡</span><b>未设目标</b></div><div class="gr-sub">今日已背 ${c} 张 · 不设目标就只记录、不催进度</div></div>`;
+  const rowQ=tgtQ>0
+    ? `<div class="goal-row"><div class="gr-h"><span>📝 每日刷题</span><b>${qz}/${tgtQ}</b>${bufQ?`<i class="gr-tag">含结转 ${bufQ}</i>`:''}</div>
+      <div class="q-bar"><div style="width:${pq}%"></div></div>${qSub}</div>`
+    : `<div class="goal-row gr-off"><div class="gr-h"><span>📝 每日刷题</span><b>未设目标</b></div><div class="gr-sub">今日已刷 ${qz} 题 · 不设目标就只记录、不催进度</div></div>`;
+  return bufHint+rowC+rowQ;
 }
 /* 首页规划速览卡片 */
 function renderHomePlan(){
@@ -3606,7 +3905,7 @@ function renderHomePlan(){
     html+=`<div class="cd-card ${cls}" style="margin-bottom:12px;cursor:pointer" onclick="go('plan')">
       <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
       <div class="cd-num">${num}<small>天</small></div>
-      <div class="cd-info"><div class="cd-name">📅 距 ${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · 每日背${p.cards||0}/刷${p.quiz||0}</div></div>
+      <div class="cd-info"><div class="cd-name">📅 距 ${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · ${planGoalLabel(p)}</div></div>
       <div style="color:var(--text-3);font-size:18px">›</div></div>`;
   }else{
     html+=`<div class="cd-card" style="margin-bottom:12px;cursor:pointer" onclick="go('plan')">
@@ -3628,7 +3927,7 @@ function planListHtml(){
     return `<div class="cd-card ${cls}">
       <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
       <div class="cd-num">${num}<small>天</small></div>
-      <div class="cd-info"><div class="cd-name">${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · 每日 背${p.cards||0}/刷${p.quiz||0}</div></div>
+      <div class="cd-info"><div class="cd-name">${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · ${planGoalLabel(p)}</div></div>
       <div class="cd-acts"><button class="btn btn-ghost btn-xs" onclick="openPlanModal('${p.id}')">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="delPlan('${p.id}')">🗑</button></div></div>`;
   }).join('')+`</div>`;
@@ -3682,9 +3981,11 @@ function renderPlan(){
   const head=plans.length>1?`📅 备考计划（${plans.length} 套）`:`📅 备考计划`;
   v.innerHTML=
     `<div class="plan-sec"><div class="ph">${head} <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加计划</button></div>${planListHtml()}`+
-      (plans.length?`<div class="plan-sum">📊 每日目标合计：背卡 <b>${baseC}</b> 张 · 刷题 <b>${baseQ}</b> 题（多套计划自动累加）</div>`:'')+`</div>`+
+      (plans.length?`<div class="plan-sum">${(baseC||baseQ)
+        ?`📊 每日目标合计：${[baseC?`背卡 <b>${baseC}</b> 张`:'',baseQ?`刷题 <b>${baseQ}</b> 题`:''].filter(Boolean).join(' · ')}（多套计划自动累加${(baseC&&baseQ)?'':'；另一项未设置'}）`
+        :`📊 当前只做考试倒计时，未设每日目标（可在计划里随时补上）`}</div>`:'')+`</div>`+
     `<div class="plan-sec"><div class="ph">🎯 每日目标进度</div>${goalBarsHtml()}</div>`+
-    `<div class="plan-sec"><div class="ph">🔥 考前冲刺清单 <span class="muted sm">近 30 天记不熟的卡片</span></div>${sprintHtml()}</div>`+
+    `<div class="plan-sec"><div class="ph">🔥 考前冲刺清单 <span class="muted sm">近 5 天记不熟的卡片</span></div>${sprintHtml()}</div>`+
     `<div class="plan-sec"><div class="ph">📆 学习日历</div>${calendarHtml()}</div>`;
 }
 /* 备考计划增删改（多套独立计划） */
@@ -3697,9 +3998,10 @@ function openPlanModal(id){
     <div class="pv-field"><label>计划名称</label><input type="text" id="plan-name" value="${esc(p?p.name:'')}" placeholder="如：考研初试 / 期末考 / 二轮复盘"></div>
     <div class="pv-field"><label>目标日期（选填，留空则只设每日目标）</label><input type="date" id="plan-date" value="${p?esc(p.date||''):''}"></div>
     <div class="pv-row">
-      <div class="pv-field"><label>每日背卡目标（张）</label><input type="number" id="plan-cards" min="0" value="${p?(p.cards||50):50}"></div>
-      <div class="pv-field"><label>每日刷题目标（题）</label><input type="number" id="plan-quiz" min="0" value="${p?(p.quiz||100):100}"></div>
+      <div class="pv-field"><label>每日背卡目标（张）<span class="muted sm">选填</span></label><input type="number" id="plan-cards" min="0" placeholder="不填 = 不设置" value="${p&&p.cards?p.cards:''}"></div>
+      <div class="pv-field"><label>每日刷题目标（题）<span class="muted sm">选填</span></label><input type="number" id="plan-quiz" min="0" placeholder="不填 = 不设置" value="${p&&p.quiz?p.quiz:''}"></div>
     </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 12px">💡 两项都可留空：只想要考试倒计时就都不填；只背卡不刷题就只填背卡。留空的那项不会出现在「每日目标进度」里。</div>
     <div class="pv-field"><label>标记颜色</label><div class="plan-colors">${colors.map(c=>`<span class="dot ${p&&p.color===c?'on':''}" style="background:${c}" data-c="${c}" onclick="planPickColor(this)"></span>`).join('')}</div></div>
     <div class="modal-actions">
       ${p?`<button class="btn btn-danger" onclick="delPlan('${p.id}')">删除</button>`:''}
@@ -3722,10 +4024,11 @@ function savePlan(){
   save();hideModal();settleBuffer();renderPlan();renderHome();toast('已保存');
 }
 function delPlan(id){DB.meta.plans=(DB.meta.plans||[]).filter(x=>x.id!==id);save();hideModal();settleBuffer();renderPlan();renderHome();toast('已删除');}
-/* 考前冲刺清单：筛近 30 天内复习过、但仍记不熟的卡片 */
+/* 考前冲刺清单：筛近 SPRINT_DAYS 天内复习过、但仍记不熟的卡片（只看最近状态，避免陈年旧卡混进来） */
+const SPRINT_DAYS=5;
 function sprintCards(){
-  const out=[];const cut=now()-30*86400000;
-  DB.decks.forEach(d=>{(d.cards||[]).forEach(c=>{
+  const out=[];const cut=now()-SPRINT_DAYS*86400000;
+  activeDecks().forEach(d=>{(d.cards||[]).forEach(c=>{
     if(c.lastReviewed&&c.lastReviewed>=cut){
       const s=cardScore(c);
       if(s<70||c.forgot||c.hard)out.push({deck:d.name,deckId:d.id,id:c.id,title:c.front,score:s,extra:cardExtra(c),forgot:!!c.forgot,hard:!!c.hard});
@@ -3735,7 +4038,7 @@ function sprintCards(){
 }
 function sprintHtml(){
   const items=sprintCards();
-  if(!items.length)return `<div class="plan-empty">🎉 近 30 天没有「反复记不熟」的卡片，继续保持！</div>`;
+  if(!items.length)return `<div class="plan-empty">🎉 近 5 天没有「反复记不熟」的卡片，继续保持！</div>`;
   const btn=`<div style="margin:2px 0 8px"><button class="btn btn-outline btn-sm" onclick="printChecklist()" title="生成 A4 纸质背诵清单，在打印对话框中选择「另存为 PDF」即可下载">🖨️ 打印 / 导出 PDF</button></div>`;
   const body=items.map(it=>{
     const sc=starOf(it.score);
@@ -3750,7 +4053,7 @@ function sprintHtml(){
       <button class="btn btn-ghost btn-xs" onclick="locateCard('${it.deckId}','${it.id}','card')">定位</button>
     </div>`;
   }).join('');
-  return `${btn}<div class="plan-sec-note">共筛出 <b style="color:var(--red)">${items.length}</b> 张近 30 天记不熟的卡片，建议优先攻克。可逐个加入次日复习，或一键全部塞进「开始今日复习」队列。</div>
+  return `${btn}<div class="plan-sec-note">共筛出 <b style="color:var(--red)">${items.length}</b> 张近 5 天记不熟的卡片，建议优先攻克。可逐个加入次日复习，或一键全部塞进「开始今日复习」队列。</div>
     <div class="weak-list">${body}</div>
     <div style="margin-top:10px"><button class="btn btn-outline btn-sm" onclick="sprintToPlan()">➕ 全部加入次日复习</button></div>`;
 }
@@ -3765,8 +4068,8 @@ function sprintQuizQs(){
   const sp=sprintCards();if(!sp.length)return [];
   const deckIds=new Set(sp.map(x=>x.deckId));
   const qs=[],seen=new Set();
-  DB.decks.forEach(d=>{ if(deckIds.has(d.id))(d.questions||[]).forEach(q=>{if(!seen.has(q.id)){seen.add(q.id);qs.push(q);}}); });
-  if(!qs.length)DB.decks.forEach(d=>(d.questions||[]).forEach(q=>{if(q.inWrongBook&&!seen.has(q.id)){seen.add(q.id);qs.push(q);}}));
+  activeDecks().forEach(d=>{ if(deckIds.has(d.id))(d.questions||[]).forEach(q=>{if(!seen.has(q.id)){seen.add(q.id);qs.push(q);}}); });
+  if(!qs.length)activeDecks().forEach(d=>(d.questions||[]).forEach(q=>{if(q.inWrongBook&&!seen.has(q.id)){seen.add(q.id);qs.push(q);}}));
   return qs;
 }
 /* 一键背诵：把冲刺清单卡片直接拉起一轮复习 */
@@ -3792,7 +4095,7 @@ function printChecklist(){
   const area=document.getElementById('print-area');
   const d=new Date(), ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   if(!items.length){
-    area.innerHTML='<div class="pc-empty">🎉 近 30 天没有「反复记不熟」的卡片，暂无可打印的背诵清单。</div>';
+    area.innerHTML='<div class="pc-empty">🎉 近 5 天没有「反复记不熟」的卡片，暂无可打印的背诵清单。</div>';
     setTimeout(()=>window.print(),30);return;
   }
   // 按卡组分组
@@ -3828,6 +4131,7 @@ function renderStats(){
   let wrongTotal=0,cardTotal=0,quizDaysCount=Object.keys(DB.meta.quizDays).length;
   let guessRight=0,guessSubmits=0,guessQs=0,luckyQs=0;
   DB.decks.forEach(d=>{
+    if(d.archived)return;
     (d.cards||[]).forEach(c=>{memTotal+=c.reviews||0;memCorrect+=c.correct||0;cardTotal++;if((c.box||1)>=5)mastered++;});
     const q=d.quiz||{};quizTotal+=q.total||0;quizCorrect+=q.correct||0;
     guessRight+=q.guessRight||0;guessSubmits+=q.guessTotal||0;
@@ -3873,8 +4177,8 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function starOf(score){return score>=85?5:score>=70?4:score>=55?3:score>=40?2:1;}
 function stars(n){return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n);}
 function starColor(n){return n>=4?'var(--green)':n>=3?'var(--orange)':'var(--red)';}
-function findCard(cid){for(const d of DB.decks){const c=(d.cards||[]).find(x=>x.id===cid);if(c)return c;}return null;}
-function findQuestion(qid){for(const d of DB.decks){const q=(d.questions||[]).find(x=>x.id===qid);if(q)return q;}return null;}
+function findCard(cid){for(const d of activeDecks()){const c=(d.cards||[]).find(x=>x.id===cid);if(c)return c;}return null;}
+function findQuestion(qid){for(const d of activeDecks()){const q=(d.questions||[]).find(x=>x.id===qid);if(q)return q;}return null;}
 /* 单卡掌握度 0-100：多次背诵正确率 + 间隔箱 + 遗忘/困难标记 */
 function cardScore(c){
   const rev=c.reviews||0;
@@ -3927,13 +4231,13 @@ function qExtra(q){
 /* 汇总诊断：最低3章节 / 反复记不住知识点 / 平均星级 */
 function diagnosis(){
   const chapters=DB.decks
-    .filter(d=>(d.cards&&d.cards.length)||(d.questions&&d.questions.length)||(d.quiz&&d.quiz.total))
+    .filter(d=>!d.archived && ((d.cards&&d.cards.length)||(d.questions&&d.questions.length)||(d.quiz&&d.quiz.total)))
     .map(d=>{const s=deckScore(d);return {d,name:d.name,score:s.score,memAcc:s.memAcc,quizAcc:s.quizAcc,wrongN:s.wrongN,cardN:s.cardN,qN:s.qN,rev:s.rev};})
     .filter(c=>c.cardN>0||c.qN>0||c.rev>0)
     .sort((a,b)=>a.score-b.score);
   const weakest=chapters.slice(0,3);
   const items=[];
-  DB.decks.forEach(d=>{
+  activeDecks().forEach(d=>{
     (d.cards||[]).forEach(c=>items.push({kind:'card',deck:d.name,deckId:d.id,id:c.id,title:c.front,
       score:cardScore(c),extra:cardExtra(c),forgot:!!c.forgot}));
     (d.questions||[]).forEach(q=>items.push({kind:'q',deck:d.name,deckId:d.id,id:q.id,title:q.question,
@@ -3980,13 +4284,13 @@ function renderDiagnosis(){
     <div class="diag-section"><h3>🔴 正确率最低的 3 个章节</h3>${chSec}</div>
     <div class="diag-section"><h3>🔵 反复记不住的知识点 Top ${dg.weakItems.length||0}</h3>
       <div class="weak-list">${itemSec}</div></div>
-    <div class="diag-section" id="diag-sprint"><h3>🔥 考前冲刺清单 <span class="muted sm">近 30 天记不熟的卡片</span></h3>
+    <div class="diag-section" id="diag-sprint"><h3>🔥 考前冲刺清单 <span class="muted sm">近 5 天记不熟的卡片</span></h3>
       ${sprintHtml()}
       <div class="sprint-actions">
-        <button class="btn btn-primary" onclick="sprintStudy()">📖 一键背诵<span class="sa-sub">优先过这些卡壳卡片</span></button>
-        <button class="btn btn-outline" onclick="sprintQuiz()">✍️ 一键刷题<span class="sa-sub">对应题目自测查漏</span></button>
+        <button class="btn btn-primary" onclick="sprintStudy()">📖 一键背诵</button>
+        <button class="btn btn-outline" onclick="sprintQuiz()">✍️ 一键刷题</button>
       </div>
-      <div class="muted" style="margin-top:10px;line-height:1.7">⚡ 考前快速查漏：先一键背诵把反复记不熟的卡片过一遍，再用对应题目自测，冲刺效率最高。</div>
+      <div class="muted" style="margin-top:10px;line-height:1.7">⚡ 先把卡壳的卡片过一遍，再用对应题目自测查漏。</div>
     </div>
     <div class="muted" style="margin-top:14px;line-height:1.8">⭐ 越少越该优先攻克；点「➕ 复习」把单个知识点加入次日复习，或「一键安排」把这里全部薄弱点塞进明天「开始今日复习」队列。掌握度由多次背诵与答题正确率自动计算（1–5 星）。</div>`;
 }
@@ -4105,7 +4409,8 @@ function loadSample(){
     }
     m.lastStudy=new Date(base).toISOString().slice(0,10);
     m.streak=6;
-    if(!m.plans.length)m.plans=[{id:uid(),name:'考研初试',date:'2026-12-21',cards:50,quiz:100,color:'#6366f1'},{id:uid(),name:'期末考试',date:'2027-01-12',cards:40,quiz:80,color:'#0ea5e9'},{id:uid(),name:'二轮复盘',date:'2026-10-15',cards:60,quiz:120,color:'#f59e0b'}];
+    // 演示三种典型配置：①背卡+刷题都设 ②只设背卡 ③只做倒计时不设目标
+    if(!m.plans.length)m.plans=[{id:uid(),name:'考研初试',date:'2026-12-21',cards:50,quiz:100,color:'#6366f1'},{id:uid(),name:'期末考试',date:'2027-01-12',cards:40,quiz:0,color:'#0ea5e9'},{id:uid(),name:'二轮复盘',date:'2026-10-15',cards:0,quiz:0,color:'#f59e0b'}];
   })();
   DB.decks.push(deck);save();renderHome();toast('已加载示例卡组，可立即体验背诵与刷题');
 }
@@ -4229,12 +4534,12 @@ function openCardPreview(deckId,id){
 function openQuestionPreview(deckId,id){
   const d=getDeck(deckId);if(!d)return;
   const q=(d.questions||[]).find(x=>x.id===id);if(!q)return;
-  const opts=(q.options||[]).map((o,i)=>`<div class="opt">${String.fromCharCode(65+i)}. ${esc(o)}</div>`).join('');
+  const opts=(q.options||[]).map((o,i)=>`<div class="opt">${String.fromCharCode(65+i)}. ${md(o)}</div>`).join('');
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">📝 题目 · ${esc(d.name)}</div>
-    <div class="pv-field"><label>题干</label><div class="preview-box">${esc(q.question)}</div></div>
+    <div class="pv-field"><label>题干</label><div class="preview-box">${md(q.question)}</div></div>
     ${opts?`<div class="pv-field"><label>选项</label><div class="preview-box">${opts}</div></div>`:''}
-    ${q.analysis?`<div class="pv-field"><label>💡 解析</label><div class="preview-box">${esc(q.analysis)}</div></div>`:''}
+    ${q.analysis?`<div class="pv-field"><label>💡 解析</label><div class="preview-box">${toRich(q.analysis)}</div></div>`:''}
     <div class="pv-field"><label>答案</label><div class="preview-box answer">${fmtAnswer(q.answer)}</div></div>
     <div class="modal-actions">
       <button class="btn ${q.fav?'btn-primary':'btn-outline'}" onclick="toggleFav('question','${q.id}',this)">${q.fav?'⭐ 已收藏':'☆ 收藏'}</button>
@@ -4249,7 +4554,7 @@ function openQuestionPreview(deckId,id){
 /* ---------- 收藏夹 ---------- */
 function collectFav(){
   const cards=[],questions=[];
-  DB.decks.forEach(d=>{
+  activeDecks().forEach(d=>{
     (d.cards||[]).forEach(c=>{if(c.fav)cards.push({d,c});});
     (d.questions||[]).forEach(q=>{if(q.fav)questions.push({d,q});});
   });
