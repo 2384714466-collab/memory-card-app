@@ -237,6 +237,9 @@
   .flashcard .face img{max-width:100%;max-height:44vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
   .flashcard .hint{position:absolute;bottom:14px;left:0;right:0;font-size:12px;color:var(--text-3)}
   .flashcard.flipped{background:linear-gradient(135deg,#eff6ff,#faf5ff)}
+  /* 正面(问题)与背面(答案)区分字号 / 行高；LaTeX 公式随字体 1em 缩放 */
+  .flashcard.flipped .face{font-size:18px;font-weight:600;line-height:1.8}
+  .flashcard .face .katex,.split-pane .face .katex{font-size:1em}
   .feedback{display:flex;gap:10px;margin-top:14px}
   .feedback .fb{flex:1;border:none;border-radius:var(--radius-s);padding:13px;font-size:14px;font-weight:700;cursor:pointer;color:#fff}
   .fb-forgot{background:var(--red)} .fb-hard{background:var(--orange)} .fb-easy{background:var(--green)}
@@ -249,9 +252,34 @@
   .split-pane{flex:1;min-width:0;background:#fff;border-radius:14px;padding:20px 16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column}
   .split-pane .split-h{font-size:12px;font-weight:800;color:var(--text-3);letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
   .split-pane.ans .split-h{color:var(--primary)}
-  .split-pane .face{font-size:18px;font-weight:700;line-height:1.7;white-space:pre-wrap;word-break:break-word;width:100%;flex:1}
+  .split-pane .face{font-size:18px;font-weight:700;line-height:1.6;white-space:pre-wrap;word-break:break-word;width:100%;flex:1}
+  .split-pane.ans .face{font-size:16px;font-weight:600;line-height:1.85}
   .split-pane .face img{max-width:100%;max-height:42vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
-  @media (max-width:680px){ .split-card{flex-direction:column} .split-pane{min-height:150px} }
+  @media (max-width:767px){ .split-card{flex-direction:column} .split-pane{min-height:150px} }
+  /* 分栏对照：答案初始关闭（空白），点击翻转为背面答案 */
+  .split-pane.closed{cursor:pointer;border:2px dashed var(--border);
+    background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 12px,#f1f5f9 12px,#f1f5f9 24px)}
+  .split-pane.closed .split-h{color:var(--text-3)}
+  .split-pane.ans.open{cursor:default}
+  .split-tip{font-weight:700;font-size:11px;color:var(--primary);opacity:.85;margin-left:4px}
+  .split-closed{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;
+    color:var(--text-3);text-align:center;user-select:none;padding:18px 0}
+  .split-closed .sc-em{font-size:34px;opacity:.45}
+  .split-closed .sc-t{font-size:14px;font-weight:700}
+
+  /* PC（≥768px）：卡片左右等分双栏、宽度自适应并限制最大宽度；按钮横向紧凑排布，清除多余空白 */
+  @media (min-width:768px){
+    .flashcard{max-width:680px;margin-inline:auto}     /* 自适应带宽 + 限制最大宽度，居中 */
+    .split-card{max-width:780px;margin-inline:auto}     /* 与 .app 容器对齐，双栏等宽 */
+    .split-pane{min-height:200px}                        /* 单行短文本也保留上下留白 */
+    /* 评级 / 切换按钮：横向紧凑排布，不再拉伸占满，去掉多余间隙 */
+    .feedback{justify-content:center;flex-wrap:wrap}
+    .feedback .fb{flex:0 0 auto;padding:11px 22px}
+    .feedback .fb-fav{margin-left:0}
+    .nav-row{justify-content:center;flex-wrap:wrap}
+    .nav-row .btn{flex:0 0 auto;min-width:132px}
+    .nav-row .nav-mid{margin:0 6px}
+  }
 
   /* quiz */
   .q-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
@@ -334,6 +362,7 @@
   .self-full{font-size:14px;line-height:1.6;color:var(--text-2)}
   .modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
   .modal-mask.show{display:flex}
+  .modal-mask.lvl2{z-index:95}
   .modal{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;max-height:86vh;overflow-y:auto}
   .modal-title{font-size:17px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px}
   .modal-actions{display:flex;gap:10px;margin-top:16px}
@@ -352,8 +381,9 @@
   .sheet-mask{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:120;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   .sheet-mask.show{opacity:1;visibility:visible}
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:121;background:#fff;border-radius:18px 18px 0 0;
-    padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .25s;max-height:82vh;overflow-y:auto}
-  .sheet.show{transform:translateY(0)}
+    padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .25s;max-height:82vh;overflow-y:auto;
+    pointer-events:none;visibility:hidden}
+  .sheet.show{transform:translateY(0);pointer-events:auto;visibility:visible}
   .sheet-hd{text-align:center;font-size:13px;color:var(--text-3);font-weight:700;padding:14px 0 10px;position:relative}
   .sheet-hd::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;border-radius:2px;background:#cbd5e1}
   .sheet-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:none;
@@ -365,6 +395,29 @@
   .sheet-item.danger{color:var(--red)}
   .sheet-divider{height:1px;background:var(--border);margin:4px 2px}
   .sheet-cancel{margin-top:8px;color:var(--text-2)}
+  /* PC 端：底部长条菜单改为居中紧凑弹窗，功能选项横向排布（卡片式网格），点弹窗外关闭 */
+  @media (min-width:681px){
+    .sheet-mask{background:rgba(15,23,42,.35);backdrop-filter:blur(2px)}
+    .sheet{left:50%;right:auto;bottom:auto;top:50%;width:auto;max-width:min(560px,92vw);
+      max-height:84vh;overflow-y:auto;padding:18px 18px 16px;border-radius:18px;
+      box-shadow:0 24px 60px rgba(15,23,42,.28);transform:translate(-50%,-50%) scale(.96);opacity:0;
+      visibility:hidden;transition:transform .18s ease,opacity .18s ease,visibility .18s ease}
+    .sheet.show{transform:translate(-50%,-50%) scale(1);opacity:1;visibility:visible}
+    .sheet-hd{padding:0 0 12px;margin-bottom:10px;border-bottom:1px solid var(--border);
+      text-align:center;font-size:14px}
+    .sheet-hd::before{display:none}                 /* 隐藏移动端拖拽条 */
+    .sheet-list{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+    .sheet-item{flex-direction:column;align-items:center;text-align:center;gap:7px;
+      width:96px;padding:14px 6px;font-size:13px;border:1px solid var(--border);border-radius:14px;
+      background:#fff;transition:background .12s,border-color .12s,transform .08s;flex:0 0 auto}
+    .sheet-item:hover{background:#f8fafc;border-color:var(--primary);transform:translateY(-1px)}
+    .sheet-item:active{background:#eef2ff;transform:translateY(0)}
+    .sheet-item .si-ic{width:auto;font-size:24px;line-height:1}
+    .sheet-item .si-lb{flex:none;line-height:1.35}
+    .sheet-item .si-sub{margin-top:2px;font-size:11px}
+    .sheet-divider{width:100%;height:1px;margin:2px 0}
+    .sheet-cancel{display:none}                      /* PC 端依赖点弹窗外关闭，去掉冗余按钮 */
+  }
   .topbar .tabs{flex:1;min-width:0}
   .top-actions{flex-shrink:0;gap:6px}
 
@@ -444,9 +497,12 @@
   .diag-ov-item .n{font-size:22px;font-weight:800}
   .diag-ov-item .l{font-size:12px;color:var(--text-3);margin-top:2px}
   .diag-section{margin:18px 0}
-  .sub-addbar{display:flex;justify-content:flex-end;margin:0 0 8px}
+  .sub-addbar{display:flex;gap:8px;margin:0 0 8px}
+  .sub-addbar .btn{flex:1;justify-content:center}
   .sprint-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-  .sprint-actions .btn{padding:9px 18px;font-size:14px}
+  .sprint-actions .btn{flex:1;justify-content:center;padding:9px 18px;font-size:14px}
+  .sprint-bottom-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .sprint-bottom-actions .btn{flex:1;justify-content:center;padding:9px 14px;font-size:14px}
   .diag-section h3{font-size:15px;margin:0 0 10px}
   .diag-ch{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
   .diag-ch-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -458,16 +514,13 @@
   .weak-list{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
   .weak-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
   .weak-row:last-child{border-bottom:none}
-  .weak-kind{font-size:14px}
   .weak-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .weak-deck{color:var(--text-3);font-size:12px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .weak-extra{color:var(--text-3);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .weak-score{font-weight:700;color:var(--red)}
+  .weak-acc{font-weight:700;color:var(--primary-dark);white-space:nowrap}
   .stars{letter-spacing:1px;font-size:15px}
   .stars.sm{font-size:13px}
   .deck-star{font-size:12px;letter-spacing:0;margin-left:4px;vertical-align:1px}
   .export-area{width:100%;height:300px;box-sizing:border-box;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6;border:1px solid var(--border);border-radius:10px;resize:vertical;background:var(--bg);color:var(--text-1)}
-  @media(max-width:520px){.diag-ov{grid-template-columns:repeat(2,1fr)}.weak-extra{display:none}}
+  @media(max-width:520px){.diag-ov{grid-template-columns:repeat(2,1fr)}}
   /* ===== 多备考计划 / 配额缓冲 / 冲刺清单 ===== */
   .cd-card{position:relative}
   .plan-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
@@ -498,6 +551,7 @@
   .search-item:hover{background:var(--primary-light)}
   .search-kind{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;color:#fff;background:var(--primary);white-space:nowrap}
   .search-kind.question{background:var(--green)}
+  .search-kind.deck{background:#64748b}
   .search-body{flex:1;min-width:0}
   .search-title{font-size:14px;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .search-snip{font-size:12px;color:var(--text-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -729,22 +783,11 @@
     <!-- ============ HOME ============ -->
     <div class="view active" id="view-home">
       <div class="home-mods" id="home-mods">
+        <div class="card" id="plan-home"></div>
+        <button class="btn btn-primary btn-block" style="padding:15px;font-size:16px" onclick="startToday()">🎯 开始复习今日</button>
         <div class="stat-grid">
           <div class="stat"><div class="n" id="hm-due">0</div><div class="l">📝 今日待复习卡片</div></div>
           <div class="stat"><div class="n g" id="hm-quiz">0</div><div class="l">✅ 今日已刷题</div></div>
-        </div>
-        <button class="btn btn-primary btn-block" style="padding:15px;font-size:16px" onclick="startToday()">🎯 开始今日复习</button>
-        <div class="memo-card">
-          <div class="memo-hd">
-            <div class="t">📝 今日学习备忘录</div>
-            <span class="memo-saved" id="memo-saved">✓ 已保存</span>
-          </div>
-          <textarea id="home-memo" class="inp" placeholder="记下今天背诵遇到的问题、卡壳的知识点…（自动保存）" oninput="memoInput(this.value)" onblur="memoBlur()"></textarea>
-        </div>
-        <div class="card" id="plan-home"></div>
-        <div class="stat-grid">
-          <div class="stat"><div class="n o" id="hm-mem-acc">0%</div><div class="l">记忆正确率</div></div>
-          <div class="stat"><div class="n g" id="hm-quiz-acc">0%</div><div class="l">刷题正确率</div></div>
         </div>
         <div class="row between" style="margin:2px">
           <div class="section-title" style="margin:0">我的卡组</div>
@@ -819,6 +862,7 @@
   <button class="tt-btn" onmousedown="event.preventDefault()" onclick="clearHighlight()">清除</button>
 </div>
 <div class="modal-mask" id="modal" onclick="if(event.target===this)hideModal()"><div class="modal" id="modal-body"></div></div>
+<div class="modal-mask lvl2" id="modal2" onclick="if(event.target===this)hideModal2()"><div class="modal" id="modal2-body"></div></div>
 
 <div class="sheet-mask" id="sheet-mask" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet" role="dialog" aria-label="更多操作">
@@ -895,7 +939,7 @@ function loadDB(){
     (dk.cards||[]).forEach(c=>{ if(c.links===undefined)c.links=[]; if(c.note===undefined)c.note=''; if(c.ext===undefined)c.ext=''; });});
     return d;
   }
-  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
+  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
 }
 /* 兼容旧数据：把单一 goals + 多 exams 合并成多套独立备考计划 plans。
    每个旧 exam → 一套「只有倒计时、不设每日目标」的计划（目标可不填，避免多套考试把目标累加翻倍）；
@@ -1398,6 +1442,17 @@ function toggleAuto(){const c=syncCfg();if(!c)return;c.auto=!c.auto;setSyncCfg(c
 function syncStatus(s){const e=document.getElementById('sy-status');if(e)e.textContent=s;}
 function showModal(){document.getElementById('modal').classList.add('show');}
 function hideModal(){document.getElementById('modal').classList.remove('show');}
+function showModal2(){document.getElementById('modal2').classList.add('show');}
+function hideModal2(){document.getElementById('modal2').classList.remove('show');}
+document.addEventListener('keydown',e=>{                       // ESC 优先关顶层弹窗（二级→一级）
+  if(e.key!=='Escape')return;
+  const m2=document.getElementById('modal2');
+  if(m2&&m2.classList.contains('show')){hideModal2();e.stopPropagation();return;}
+  const m=document.getElementById('modal');
+  if(m&&m.classList.contains('show')){hideModal();e.stopPropagation();return;}
+  const sh=document.getElementById('sheet');
+  if(sh&&sh.classList.contains('show')){closeSheet();e.stopPropagation();return;}
+});
 
 /* ---- 底部「更多操作」统一入口面板 ---- */
 function openSheet(title,items){
@@ -1429,13 +1484,9 @@ function openDeckMenu(did){
   const d=getDeck(did);if(!d)return;
   const cardN=(d.cards||[]).length, qN=(d.questions||[]).length, canQuiz=qN>0;
   const items=[];
-  if(cardN)items.push({icon:'🔄',label:'一键翻面',sub:'整套互换正反面',onclick:`flipAll('${d.id}')`});
   if(cardN||canQuiz)items.push({icon:sel.active?'✕':'☑',label:sel.active?'退出批量管理':'批量管理',onclick:"selToggle()"});
-  if(canQuiz)items.push({icon:'🔁',label:'重置已做状态',sub:'重做一遍题库',onclick:`resetDone('${d.id}')`});
   items.push({icon:'📥',label:'导入到本卡组',sub:'题目 / 卡片',onclick:`openImport('${d.id}')`});
   items.push({icon:'📂',label:'移动到文件夹',sub:'整理归类到其它文件夹',onclick:`openMoveDeckMenu('${d.id}')`});
-  items.push({icon:'➕',label:'手写新增卡片',sub:'可插图 / 标考点',onclick:`openNewCard('${d.id}')`});
-  items.push({icon:'➕',label:'手写新增题目',sub:'单选 / 多选 / 判断，支持公式',onclick:`openNewQuestion('${d.id}')`});
   items.push({icon:'⚙',label:'卡组设置',onclick:`openDeckSettings('${d.id}')`});
   items.push({icon:d.archived?'📤':'📦',label:d.archived?'取消归档（重新进入复习/统计）':'归档卡组',sub:d.archived?'已归档，将重新计入':'考完即归档，不再进入复习计划/统计/诊断',onclick:`${d.archived?'unarchiveDeck':'archiveDeck'}('${d.id}')`});
   items.push({divider:true});
@@ -1504,6 +1555,7 @@ function restartStudyOrder(order){closeSheet();startStudy(studyState.deckId,{sco
 function openStudyConfigFromStudy(){
   closeSheet();
   if(studyState.global){toast('全局复习（收藏夹 / 今日复习）请退出后重新进入调整范围');return;}
+  window.__bt=null;window.__ct=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
   window.__sc={id:studyState.deckId,scope:studyState.scope||'all',tags:studyState.tags||[],order:studyState.order||'shuffle',display:studyState.display||'flip'};
   renderStudyConfig();showModal();
 }
@@ -1830,14 +1882,14 @@ let CARD_TAGS=(DB.meta&&DB.meta.tags&&DB.meta.tags.length)?DB.meta.tags:DEFAULT_
 function syncTags(){DB.meta.tags=CARD_TAGS.slice();}
 function tagMeta(key){return CARD_TAGS.find(t=>t.key===key)||{key,icon:'🏷',label:key};}
 /* ---- 标签自定义管理 ---- */
-function openTagManager(){renderTagManager();showModal();}
+function openTagManager(){renderTagManager();showModal2();}
 function renderTagManager(){
   const rows=CARD_TAGS.map(t=>`<div class="tag-row">
     <input class="inp tag-ic" value="${esc(t.icon)}" maxlength="2" style="width:46px;text-align:center" onchange="tagField('${t.key}','icon',this.value)">
     <input class="inp tag-lb" value="${esc(t.label)}" onchange="tagField('${t.key}','label',this.value)">
     <button class="btn btn-danger btn-xs" type="button" onclick="tagDel('${t.key}')" title="删除标签">🗑</button>
   </div>`).join('');
-  document.getElementById('modal-body').innerHTML=`
+  document.getElementById('modal2-body').innerHTML=`
     <div class="modal-title">🏷 自定义标签</div>
     <p class="muted" style="margin:2px 0 10px">标签用于卡片分类与背诵筛选。改名 / 改图标会<b>同步</b>到所有已标记的卡片与背诵设置；删除会一并移除卡片上的该标签。</p>
     <div class="tag-rows">${rows||'<div class="muted">还没有标签</div>'}</div>
@@ -1848,7 +1900,7 @@ function renderTagManager(){
         <button class="btn btn-primary btn-sm" type="button" onclick="tagAdd()">＋ 添加</button>
       </div>
     </div>
-    <div class="modal-actions"><button class="btn btn-primary" onclick="hideModal()">完成</button></div>`;
+    <div class="modal-actions"><button class="btn btn-primary" onclick="hideModal2()">完成</button></div>`;
 }
 function tagField(key,field,val){
   const t=CARD_TAGS.find(x=>x.key===key);if(!t)return;
@@ -1866,12 +1918,18 @@ function tagAdd(){
   CARD_TAGS.push({key:'t'+Date.now().toString(36),icon,label});syncTags();save();
   renderTagManager();toast('已添加标签');
   if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
+  if(window.__sc)renderStudyConfig();
+  if(window.__ct)renderCardTags();
+  if(window.__bt)renderBatchTagModal();
 }
 function tagDel(key){
   if(CARD_TAGS.length<=1){toast('至少保留一个标签');return;}
   if(!confirm('删除该标签？所有卡片上对应的标签也会一并移除。'))return;
   CARD_TAGS=CARD_TAGS.filter(t=>t.key!==key);syncTags();
   DB.decks.forEach(d=>(d.cards||[]).forEach(c=>{if(c.tags)c.tags=c.tags.filter(x=>x!==key);}));
+  if(window.__ct&&window.__ct.tags)window.__ct.tags=window.__ct.tags.filter(x=>x!==key);   // 同步清掉编辑副本中的失效标签
+  if(window.__bt&&window.__bt.tags)window.__bt.tags=window.__bt.tags.filter(x=>x!==key);
+  if(window.__sc&&window.__sc.tags)window.__sc.tags=window.__sc.tags.filter(x=>x!==key);
   save();renderTagManager();
   if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
   if(window.__sc)renderStudyConfig();
@@ -1884,8 +1942,11 @@ function tagDel(key){
 let cur={deckId:null,sub:'cards',collapsed:{},showEmpty:false};
 let sel={active:false,ids:new Set()};
 let navStack=[];                                  // 导航历史栈：支持「原路返回」
+const viewScroll={};                             // 每个视图离开时保存的滚动位置，返回时原路恢复
 function activeView(){const a=document.querySelector('.view.active');return a&&a.id?a.id.replace('view-',''):null;}
 function go(view,record=true){
+  const leaving=activeView();
+  if(leaving)viewScroll[leaving]=window.scrollY||document.documentElement.scrollTop||0;  // 离开前保存当前滚动位置（文档滚动）
   if(record){const cur=activeView();if(cur&&cur!==view){navStack.push(cur);if(navStack.length>30)navStack.shift();}}
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
@@ -1897,6 +1958,7 @@ function go(view,record=true){
   if(view==='detail')renderDetail();
   if(view==='plan')renderPlan();
   if(view==='diagnosis')renderDiagnosis();
+  window.scrollTo(0,viewScroll[view]||0);                // 渲染后恢复目标视图滚动位置
 }
 function goBack(){const v=navStack.pop();if(v)go(v,false);else go('home',false);}   // 返回进入时的上一页
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
@@ -1942,20 +2004,16 @@ function dueCards(){
   return n;
 }
 function renderHome(){
-  const mt=document.getElementById('home-memo');
-  if(mt && document.activeElement!==mt) mt.value=getMemo(todayKey());
   document.getElementById('hm-due').textContent=dueCards();
-  // today quiz count = quizDays today
   document.getElementById('hm-quiz').textContent=DB.meta.quizDays[todayKey()]||0;
-  const m=memAccuracy();const q=quizAccuracy();
-  document.getElementById('hm-mem-acc').textContent=m+'%';
-  document.getElementById('hm-quiz-acc').textContent=q+'%';
   renderHomePlan();
   const list=document.getElementById('deck-list');
   const secs=[];
   DB.folders.forEach(f=>secs.push(folderSectionHtml(f.id,f.name,decksInFolder(f.id),false)));
   const unc=uncategorizedDecks();
   if(unc.length)secs.push(folderSectionHtml('none','未分组',unc,true));
+  const arch=DB.decks.filter(d=>d.archived);
+  if(arch.length)secs.push(folderSectionHtml('archived','📦 已归档',arch,true));
   if(!secs.length){
     list.innerHTML='<div class="empty"><div class="em">📭</div>还没有卡组，导入文档或新建一个吧</div>';
     const bs=document.getElementById('backup-status');
@@ -2419,8 +2477,8 @@ function delFolder(id){
   DB.folders=DB.folders.filter(x=>x.id!==id);
   save();renderHome();toast('已删除文件夹：'+f.name);
 }
-function decksInFolder(fid){return DB.decks.filter(d=>d.folderId===fid && DB.folders.some(f=>f.id===fid));}
-function uncategorizedDecks(){return DB.decks.filter(d=>!d.folderId || !DB.folders.some(f=>f.id===d.folderId));}
+function decksInFolder(fid){return DB.decks.filter(d=>d.folderId===fid && DB.folders.some(f=>f.id===fid) && !d.archived);}
+function uncategorizedDecks(){return DB.decks.filter(d=>(!d.folderId || !DB.folders.some(f=>f.id===d.folderId)) && !d.archived);}
 /* 卡组移动到其它文件夹：fid 为 null 表示移入「未分组」 */
 function openMoveDeckMenu(did){
   const d=getDeck(did);if(!d)return;
@@ -2568,7 +2626,7 @@ function renderDetail(){
     <div class="card">
       <div class="row between" style="margin-bottom:8px">
         <button class="btn btn-ghost btn-sm" onclick="goBack()">← 返回</button>
-        <button class="btn btn-ghost btn-sm" onclick="openDeckMenu('${d.id}')" title="更多操作（翻面 / 批管 / 导入 / 设置 / 删除…）">⋯ 更多</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDeckMenu('${d.id}')" title="更多操作（批管 / 导入 / 设置 / 删除…）">⋯ 更多</button>
       </div>
       <div class="row" style="gap:12px">
         <div class="ic" style="width:54px;height:54px;border-radius:14px;background:${canQuiz?'var(--green-light)':'var(--primary-light)'};display:flex;align-items:center;justify-content:center;font-size:26px">${canQuiz?'📝':'🃏'}</div>
@@ -2623,7 +2681,7 @@ function renderDetailSub(sub){
         <button class="btn btn-ghost" onclick="clearEmptyCards('${d.id}')">🧹 清空空白卡</button></div>`;
     }
     const listSrc=cur.showEmpty?d.cards:cards;
-    box.innerHTML=bar+note+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button></div>`+listSrc.map(c=>{
+    box.innerHTML=bar+note+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="flipAll('${d.id}')">🔄 一键翻面</button><button class="btn btn-ghost btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button></div>`+listSrc.map(c=>{
       const on=sel.ids.has(c.id);const ec=isCardEmpty(c)?' empty-card':'';
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${c.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('card','${d.id}','${c.id}')" title="更多操作">⋯</button></div>`;
@@ -2636,7 +2694,7 @@ function renderDetailSub(sub){
         <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入题库</button>
       </div></div>`;return;}
     const bar=sel.active?batchBarHtml():'';
-    box.innerHTML=bar+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button></div>`+d.questions.map(q=>{
+    box.innerHTML=bar+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="resetDone('${d.id}')">🔁 重置已做状态</button><button class="btn btn-ghost btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button></div>`+d.questions.map(q=>{
       const on=sel.ids.has(q.id);
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${q.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('question','${d.id}','${q.id}')" title="更多操作">⋯</button></div>`;
@@ -2777,6 +2835,7 @@ function batchBarHtml(){
 }
 function batchTag(){
   if(!sel.ids.size){toast('请先选择卡片');return;}
+  window.__ct=null;window.__sc=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
   window.__bt={op:'add',tags:[]};renderBatchTagModal();showModal();
 }
 function renderBatchTagModal(){
@@ -2930,6 +2989,7 @@ function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;
 /* ---- 卡片标签编辑 ---- */
 function openCardTags(id,cid){
   const d=getDeck(id);const c=d.cards.find(x=>x.id===cid);if(!c)return;
+  window.__bt=null;window.__sc=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
   window.__ct={id,cid,tags:(c.tags||[]).slice()};
   renderCardTags();showModal();
 }
@@ -3203,6 +3263,7 @@ function studyEmptyMsg(cfg){
 /* ---- 进入卡片背诵前的设置弹窗 ---- */
 function openStudyConfig(id){
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
+  window.__bt=null;window.__ct=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
   window.__sc={id,scope:'all',tags:[],order:'shuffle',display:'flip'};
   renderStudyConfig();showModal();
 }
@@ -3322,16 +3383,21 @@ function linksNoteHtml(card){return linksHtml(card.links)+noteHtml(card.note);}
 function studyCardExtras(card){return studyExtHtml(card)+linksHtml(card.links)+noteHtml(card.note);}
 function studyCardHtml(card){
   const disp=studyState.display;
-  // 分栏对照模式：左问题右答案，同时可见，适合大屏对照背诵
+  // 分栏对照模式：左问题常显，右侧答案初始关闭（空白），点击翻转显示背面答案
   if(disp==='split'){
+    const backOpen=!!studyState.flipped;
+    const ansHead=`<div class="split-h">✅ 答案${backOpen?'':'<span class="split-tip">（点击显示）</span>'}</div>`;
+    const ansBody=backOpen
+      ? `<div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>`
+      : `<div class="split-closed"><div class="sc-em">❓</div><div class="sc-t">点击显示答案</div></div>`;
     return `<div class="split-card">
       <div class="split-pane">
         <div class="split-h">📋 问题</div>
         <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front">${toRich(face(card))}</div>
       </div>
-      <div class="split-pane ans">
-        <div class="split-h">✅ 答案</div>
-        <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>
+      <div class="split-pane ans ${backOpen?'open':'closed'}" onclick="splitRevealBack(event)" role="button" tabindex="0" aria-label="点击显示答案">
+        ${ansHead}
+        ${ansBody}
       </div>
     </div>
     ${studyCardExtras(card)}`;
@@ -3384,7 +3450,6 @@ function studyCardHtml(card){
   }
   return `<div class="flashcard ${studyState.flipped?'flipped':''}" id="flash" onclick="flipCard(event)">
     <div ${faceAttr}>${studyState.flipped?fmtAnswer(back(card)):toRich(face(card))}</div>
-    <div class="hint">${studyState.flipped?'👆 点击翻回正面 · ←→ 或下方按钮切换':'👆 点击查看背面 · ←→ 或下方按钮切换'} · 长按文字可标记 / 加粗 / 荧光</div>
   </div>
   ${studyState.flipped?linksNoteHtml(card):''}`;
 }
@@ -3405,6 +3470,16 @@ function flipCard(e){
   if(sel&&!sel.isCollapsed&&sel.toString().trim()){
     const card=document.getElementById('flash');
     if(card&&sel.anchorNode&&card.contains(sel.anchorNode))return;
+  }
+  studyState.flipped=!studyState.flipped;renderStudy();
+}
+/* 分栏对照模式：点击答案栏，在「空白关闭」与「显示背面答案」之间反转 */
+function splitRevealBack(e){
+  if(e&&e.target&&e.target.tagName==='IMG'){e.stopPropagation();zoomImg(e.target.src);return;}
+  const sel=window.getSelection();
+  if(sel&&!sel.isCollapsed&&sel.toString().trim()){
+    const pane=e.currentTarget;
+    if(pane&&sel.anchorNode&&pane.contains(sel.anchorNode))return;
   }
   studyState.flipped=!studyState.flipped;renderStudy();
 }
@@ -3472,6 +3547,7 @@ function selfResultHtml(card,r){
 }
 function grade(level){
   const d=getDeck(studyState.deckId);const card=studyState.queue[studyState.idx];
+  const wasWeak=!!card.forgot||!!card.hard||(card.reviews||0)>0; // 曾经记不熟 = 再错即「反复出错」
   card.reviews=(card.reviews||0)+1;
   recordDaily('card');
   if(level===2)card.correct=(card.correct||0)+1;
@@ -3483,6 +3559,8 @@ function grade(level){
   card.hard=(level===1);   // 🟡困难 → 标记困难
   card.forgot=(level===0); // 🔴忘记 → 标记忘记
   card.easy=(level===2);   // 🟢简单 → 标记简单（三态互斥）
+  if(level===0&&wasWeak)pinSprint(card.id,'card');   // 反复出错：自动钉入考前冲刺清单（复习次数自动增加）
+  else if(level>=1)unpinSprint(card.id,'card');        // 记住了：自动移出冲刺清单
   const cd=cycleForCard(card);const days=cd[Math.min(box-1,cd.length-1)];
   card.nextReview=now()+days*86400000;
   card.lastReviewed=now();
@@ -3733,7 +3811,13 @@ function submitAnswer(){
   recordDaily('quiz');
   // wrong book
   q.done=true;
-  if(!correct){q.wrongCount=(q.wrongCount||0)+1;q.inWrongBook=true;}
+  const wasWrongBefore=(q.wrongCount||0)>=1;   // 之前已错过 = 本次再错即「反复出错」
+  if(!correct){
+    q.wrongCount=(q.wrongCount||0)+1;q.inWrongBook=true;
+    if(wasWrongBefore)pinSprint(q.id,'q');      // 反复出错：自动钉入考前冲刺清单（复习次数自动增加）
+  }else{
+    unpinSprint(q.id,'q');                        // 答对：掌握后自动移出冲刺清单
+  }
   // 🎲 蒙题：蒙对 = 隐形盲区，收进蒙题本 + 错题本
   let lucky=false;
   if(guessed){
@@ -3913,7 +3997,7 @@ function renderHomePlan(){
       <div class="cd-info"><div class="cd-name">设置备考计划</div><div class="cd-date">点此添加考研 / 期末等多套独立目标</div></div>
       <div style="color:var(--text-3);font-size:18px">›</div></div>`;
   }
-  html+=goalBarsHtml();
+  if((todayBase('cards')>0)||(todayBase('quiz')>0))html+=goalBarsHtml();  // 任一套计划设了每日目标才展示进度块
   el.innerHTML=html;
 }
 /* 备考计划区块（规划页，列出全部计划，相互独立） */
@@ -4024,50 +4108,58 @@ function savePlan(){
   save();hideModal();settleBuffer();renderPlan();renderHome();toast('已保存');
 }
 function delPlan(id){DB.meta.plans=(DB.meta.plans||[]).filter(x=>x.id!==id);save();hideModal();settleBuffer();renderPlan();renderHome();toast('已删除');}
-/* 考前冲刺清单：筛近 SPRINT_DAYS 天内复习过、但仍记不熟的卡片（只看最近状态，避免陈年旧卡混进来） */
+/* 考前冲刺清单：筛近 SPRINT_DAYS 天内复习过、但仍记不熟的卡片（只看最近状态，避免陈年旧卡混进来）；
+   再加上用户手动复习钉住、或反复出错自动入列的卡片 / 题目（持久保留，不受近 5 天限制） */
 const SPRINT_DAYS=5;
 function sprintCards(){
   const out=[];const cut=now()-SPRINT_DAYS*86400000;
+  const seen=new Set();
   activeDecks().forEach(d=>{(d.cards||[]).forEach(c=>{
     if(c.lastReviewed&&c.lastReviewed>=cut){
       const s=cardScore(c);
-      if(s<70||c.forgot||c.hard)out.push({deck:d.name,deckId:d.id,id:c.id,title:c.front,score:s,extra:cardExtra(c),forgot:!!c.forgot,hard:!!c.hard});
+      if(s<70||c.forgot||c.hard){out.push({kind:'card',deck:d.name,deckId:d.id,id:c.id,title:c.front,score:s,extra:cardExtra(c),forgot:!!c.forgot,hard:!!c.hard,pinned:false,acc:c.reviews?Math.round((c.correct||0)/c.reviews*100):null});seen.add('card:'+c.id);}
     }
   });});
+  const pin=DB.meta.sprintPinned||{cards:[],questions:[]};
+  (pin.cards||[]).forEach(id=>{ if(seen.has('card:'+id))return; let fc=null,fd=null;
+    activeDecks().forEach(d=>{ if(!fc){const c=(d.cards||[]).find(x=>x.id===id); if(c){fc=c;fd=d;}} });
+    if(fc){const s=cardScore(fc);out.push({kind:'card',deck:fd.name,deckId:fd.id,id:fc.id,title:fc.front,score:s,extra:cardExtra(fc),forgot:!!fc.forgot,hard:!!fc.hard,pinned:true,acc:fc.reviews?Math.round((fc.correct||0)/fc.reviews*100):null});seen.add('card:'+id);} });
+  (pin.questions||[]).forEach(id=>{ if(seen.has('q:'+id))return; let fq=null,fd=null;
+    activeDecks().forEach(d=>{ if(!fq){const q=(d.questions||[]).find(x=>x.id===id); if(q){fq=q;fd=d;}} });
+    if(fq){const s=questionScore(fq);out.push({kind:'q',deck:fd.name,deckId:fd.id,id:fq.id,title:fq.question,score:s,extra:qExtra(fq),forgot:false,hard:false,pinned:true,acc:fq.answered?Math.round((fq.answered-(fq.wrongCount||0))/fq.answered*100):null});seen.add('q:'+id);} });
   return out.sort((a,b)=>a.score-b.score);
 }
 function sprintHtml(){
   const items=sprintCards();
   if(!items.length)return `<div class="plan-empty">🎉 近 5 天没有「反复记不熟」的卡片，继续保持！</div>`;
-  const btn=`<div style="margin:2px 0 8px"><button class="btn btn-outline btn-sm" onclick="printChecklist()" title="生成 A4 纸质背诵清单，在打印对话框中选择「另存为 PDF」即可下载">🖨️ 打印 / 导出 PDF</button></div>`;
   const body=items.map(it=>{
     const sc=starOf(it.score);
     return `<div class="weak-row">
       <span class="stars sm" style="color:${starColor(sc)}">${stars(sc)}</span>
-      <span class="weak-kind card">🃏</span>
       <span class="weak-title" title="${esc(it.title)}">${esc(it.title)}</span>
-      <span class="weak-deck">${esc(it.deck)}</span>
-      <span class="weak-extra">${esc(it.extra)}</span>
-      <span class="weak-score">${it.score}分</span>
-      <button class="btn btn-ghost btn-xs" onclick="addToPlan('${it.id}','card')">➕ 复习</button>
-      <button class="btn btn-ghost btn-xs" onclick="locateCard('${it.deckId}','${it.id}','card')">定位</button>
+      <span class="weak-acc ${it.acc==null?'muted':''}">正确率 ${it.acc==null?'—':it.acc+'%'}</span>
+      <button class="btn btn-ghost btn-xs" onclick="locateCard('${it.deckId}','${it.id}','${it.kind}')">定位</button>
     </div>`;
   }).join('');
-  return `${btn}<div class="plan-sec-note">共筛出 <b style="color:var(--red)">${items.length}</b> 张近 5 天记不熟的卡片，建议优先攻克。可逐个加入次日复习，或一键全部塞进「开始今日复习」队列。</div>
-    <div class="weak-list">${body}</div>
-    <div style="margin-top:10px"><button class="btn btn-outline btn-sm" onclick="sprintToPlan()">➕ 全部加入次日复习</button></div>`;
+  return `<div class="weak-list">${body}</div>
+    <div class="sprint-bottom-actions">
+      <button class="btn btn-outline btn-sm" onclick="printChecklist()" title="生成 A4 纸质背诵清单，在打印对话框中选择「另存为 PDF」即可下载">🖨️ 打印 / 导出 PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="sprintToPlan()">➕ 全部加入次日复习</button>
+    </div>`;
 }
 function sprintToPlan(){
   const items=sprintCards();if(!items.length){toast('没有可加入的卡片');return;}
   const p=DB.meta.planTomorrow||(DB.meta.planTomorrow={cards:[],questions:[]});
-  let n=0;items.forEach(it=>{if(!p.cards.includes(it.id)){p.cards.push(it.id);n++;}});
-  save();renderPlan();toast('已加入 '+n+' 张冲刺卡片到次日复习 ✅');
+  let n=0;items.forEach(it=>{const arr=it.kind==='card'?p.cards:p.questions;if(!arr.includes(it.id)){arr.push(it.id);pinSprint(it.id,it.kind);n++;}});
+  save();renderDiagnosis();toast('已加入 '+n+' 项到次日复习 · 已钉入冲刺清单 ✅');
 }
 /* 冲刺清单对应的题目（所属卡组里有冲刺弱卡的那些题；无题则退回全局错题） */
 function sprintQuizQs(){
-  const sp=sprintCards();if(!sp.length)return [];
+  const sp=sprintCards();
   const deckIds=new Set(sp.map(x=>x.deckId));
   const qs=[],seen=new Set();
+  // 直接钉住的题目优先纳入
+  (DB.meta.sprintPinned?.questions||[]).forEach(id=>{ activeDecks().forEach(d=>{ const q=(d.questions||[]).find(x=>x.id===id); if(q&&!seen.has(q.id)){seen.add(q.id);qs.push(q);} }); });
   activeDecks().forEach(d=>{ if(deckIds.has(d.id))(d.questions||[]).forEach(q=>{if(!seen.has(q.id)){seen.add(q.id);qs.push(q);}}); });
   if(!qs.length)activeDecks().forEach(d=>(d.questions||[]).forEach(q=>{if(q.inWrongBook&&!seen.has(q.id)){seen.add(q.id);qs.push(q);}}));
   return qs;
@@ -4238,10 +4330,12 @@ function diagnosis(){
   const weakest=chapters.slice(0,3);
   const items=[];
   activeDecks().forEach(d=>{
+    const dq=d.quiz||{};const qAcc=(dq.total||0)>0?Math.round((dq.correct||0)/(dq.total||0)*100):null;
     (d.cards||[]).forEach(c=>items.push({kind:'card',deck:d.name,deckId:d.id,id:c.id,title:c.front,
-      score:cardScore(c),extra:cardExtra(c),forgot:!!c.forgot}));
+      score:cardScore(c),extra:cardExtra(c),forgot:!!c.forgot,
+      acc:(c.reviews||0)>0?Math.round((c.correct||0)/(c.reviews||0)*100):null}));
     (d.questions||[]).forEach(q=>items.push({kind:'q',deck:d.name,deckId:d.id,id:q.id,title:q.question,
-      score:questionScore(q),extra:qExtra(q),wrongCount:q.wrongCount||0,inWrongBook:!!q.inWrongBook}));
+      score:questionScore(q),extra:qExtra(q),wrongCount:q.wrongCount||0,inWrongBook:!!q.inWrongBook,acc:qAcc}));
   });
   const weakItems=items.filter(it=>it.score<70||it.wrongCount>0||it.forgot||it.inWrongBook)
     .sort((a,b)=>a.score-b.score).slice(0,12);
@@ -4251,6 +4345,7 @@ function diagnosis(){
 }
 function renderDiagnosis(){
   const dg=diagnosis();
+  autoEnrollWeak(dg);   // 反复记不住的知识点自动钉入考前冲刺清单（即自动加入复习），无需手动点「复习」
   const ov=`<div class="diag-ov">
     <div class="diag-ov-item"><div class="n" style="color:${starColor(Math.round(dg.avgStar))}">${dg.avgStar?stars(Math.round(dg.avgStar)):'—'}</div><div class="l">平均掌握度</div></div>
     <div class="diag-ov-item"><div class="n">${dg.totalChapters}</div><div class="l">有数据章节</div></div>
@@ -4269,12 +4364,8 @@ function renderDiagnosis(){
     const sc=starOf(it.score);
     return `<div class="weak-row">
       <span class="stars sm" style="color:${starColor(sc)}">${stars(sc)}</span>
-      <span class="weak-kind ${it.kind}">${it.kind==='card'?'🃏':'📝'}</span>
       <span class="weak-title" title="${esc(it.title)}">${esc(it.title)}</span>
-      <span class="weak-deck">${esc(it.deck)}</span>
-      <span class="weak-extra">${esc(it.extra)}</span>
-      <span class="weak-score">${it.score}分</span>
-      <button class="btn btn-ghost btn-xs" onclick="addToPlan('${it.id}','${it.kind}')">➕ 复习</button>
+      <span class="weak-acc ${it.acc==null?'muted':''}">正确率 ${it.acc==null?'—':it.acc+'%'}</span>
       <button class="btn btn-ghost btn-xs" onclick="locateCard('${it.deckId}','${it.id}','${it.kind}')">定位</button>
     </div>`;
   }).join(''):'<div class="muted">🎉 暂时没有明显薄弱的知识点，保持节奏！</div>';
@@ -4285,14 +4376,13 @@ function renderDiagnosis(){
     <div class="diag-section"><h3>🔵 反复记不住的知识点 Top ${dg.weakItems.length||0}</h3>
       <div class="weak-list">${itemSec}</div></div>
     <div class="diag-section" id="diag-sprint"><h3>🔥 考前冲刺清单 <span class="muted sm">近 5 天记不熟的卡片</span></h3>
-      ${sprintHtml()}
       <div class="sprint-actions">
         <button class="btn btn-primary" onclick="sprintStudy()">📖 一键背诵</button>
         <button class="btn btn-outline" onclick="sprintQuiz()">✍️ 一键刷题</button>
       </div>
-      <div class="muted" style="margin-top:10px;line-height:1.7">⚡ 先把卡壳的卡片过一遍，再用对应题目自测查漏。</div>
+      ${sprintHtml()}
     </div>
-    <div class="muted" style="margin-top:14px;line-height:1.8">⭐ 越少越该优先攻克；点「➕ 复习」把单个知识点加入次日复习，或「一键安排」把这里全部薄弱点塞进明天「开始今日复习」队列。掌握度由多次背诵与答题正确率自动计算（1–5 星）。</div>`;
+    <div class="muted" style="margin-top:14px;line-height:1.8">⭐ 星级越少越该优先攻克；弱项会由系统自动钉入冲刺清单并安排复习，反复出错的也会自动入列、记住后自动移出。掌握度由多次背诵与答题正确率自动计算（1–5 星）。</div>`;
 }
 function exportDiagnosis(){
   const dg=diagnosis();const date=new Date().toISOString().slice(0,10);
@@ -4350,11 +4440,24 @@ function downloadDiagnosis(){
   a.download='薄弱点诊断报告_'+new Date().toISOString().slice(0,10)+'.md';
   a.click();URL.revokeObjectURL(a.href);toast('已下载报告');
 }
-function addToPlan(id,kind){
-  const p=DB.meta.planTomorrow||(DB.meta.planTomorrow={cards:[],questions:[]});
+function pinSprint(id,kind){
+  const p=DB.meta.sprintPinned||(DB.meta.sprintPinned={cards:[],questions:[]});
   const arr=kind==='card'?p.cards:p.questions;
-  if(arr.includes(id)){toast('已在次日计划中');return;}
-  arr.push(id);save();toast('已加入次日复习');
+  if(!arr.includes(id))arr.push(id);
+}
+/* 掌握后自动移出冲刺清单（记忆成功 / 答对的题目） */
+function unpinSprint(id,kind){
+  const sp=DB.meta.sprintPinned; if(!sp)return;
+  const arr=kind==='card'?sp.cards:sp.questions, i=arr.indexOf(id);
+  if(i>=0){arr.splice(i,1);save();}
+}
+/* 反复记不住的知识点：渲染诊断时自动钉入考前冲刺清单（= 自动加入复习），掌握后由 unpinSprint 自动移出 */
+function autoEnrollWeak(dg){
+  const sp=DB.meta.sprintPinned||(DB.meta.sprintPinned={cards:[],questions:[]});
+  let changed=false;
+  dg.weakItems.forEach(it=>{const arr=it.kind==='card'?sp.cards:sp.questions;
+    if(!arr.includes(it.id)){arr.push(it.id);changed=true;}});
+  if(changed)save();
 }
 function planTomorrowReview(){
   const dg=diagnosis();
@@ -4365,9 +4468,9 @@ function planTomorrowReview(){
     (d.cards||[]).forEach(x=>ids.push({id:x.id,kind:'card'}));
     (d.questions||[]).forEach(x=>ids.push({id:x.id,kind:'q'}));}});
   let n=0;
-  ids.forEach(o=>{const arr=o.kind==='card'?p.cards:p.questions;if(!arr.includes(o.id)){arr.push(o.id);n++;}});
+  ids.forEach(o=>{const arr=o.kind==='card'?p.cards:p.questions;if(!arr.includes(o.id)){arr.push(o.id);pinSprint(o.id,o.kind);n++;}});
   save();
-  toast(n?`已为明天安排 ${n} 个薄弱知识点 ✅`:'没有新的薄弱点可安排');
+  toast(n?`已为明天安排 ${n} 个薄弱知识点 · 并钉入冲刺清单 ✅`:'没有新的薄弱点可安排');
   renderDiagnosis();
 }
 
@@ -4464,6 +4567,12 @@ function globalSearch(raw){
   const terms=q.split(/\s+/).filter(Boolean);
   const res=[];
   DB.decks.forEach(d=>{
+    const nameHit=matchScore(d.name,terms);
+    if(nameHit){
+      res.push({deck:d.name,deckId:d.id,kind:'deck',id:d.id,title:d.name,
+        snippet:`${d.cards?d.cards.length:0} 张卡片 · ${d.questions?d.questions.length:0} 道题目${d.archived?' · 📦 已归档':''}`,
+        score:nameHit+20});
+    }
     (d.cards||[]).forEach(c=>{
       const fields=searchFieldsOf('card',c);
       const hit=matchScore(fields,terms);
@@ -4487,7 +4596,7 @@ function globalSearch(raw){
   const top=res.slice(0,30);
   if(!top.length){box.innerHTML=`<div class="search-empty">没有匹配「${esc(raw)}」的内容，换个关键词试试</div>`;box.style.display='block';return;}
   box.innerHTML=top.map(r=>`<div class="search-item" onclick="jumpSearch('${r.kind}','${r.deckId}','${r.id}')">
-      <span class="search-kind ${r.kind}">${r.kind==='card'?'🃏 卡片':'📝 题目'}</span>
+      <span class="search-kind ${r.kind}">${r.kind==='card'?'🃏 卡片':r.kind==='question'?'📝 题目':'📁 卡组'}</span>
       <div class="search-body">
         <div class="search-title">${hl(r.title,terms)}</div>
         <div class="search-snip">${hl(r.snippet,terms)}</div>
@@ -4508,6 +4617,7 @@ function searchKey(e){
 }
 function jumpSearch(kind, deckId, id){
   closeSearch();
+  if(kind==='deck'){openDeck(deckId);return;}
   if(kind==='card')openCardPreview(deckId,id);
   else openQuestionPreview(deckId,id);
 }
