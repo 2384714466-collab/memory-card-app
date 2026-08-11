@@ -233,12 +233,13 @@
              display:flex;align-items:center;justify-content:center;padding:34px 26px;text-align:center;cursor:pointer;
              user-select:none;transition:transform .3s;position:relative}
   .flashcard{overflow:auto}
-  .flashcard .face{font-size:19px;font-weight:700;line-height:1.7;white-space:pre-wrap;word-break:break-word;width:100%}
+  .flashcard .face{font-size:calc(19px * var(--fs,1));font-weight:700;line-height:calc(1.7 * var(--lh,1));white-space:pre-wrap;word-break:break-word;width:100%;
+    margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .flashcard .face img{max-width:100%;max-height:44vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
   .flashcard .hint{position:absolute;bottom:14px;left:0;right:0;font-size:12px;color:var(--text-3)}
   .flashcard.flipped{background:linear-gradient(135deg,#eff6ff,#faf5ff)}
   /* 正面(问题)与背面(答案)区分字号 / 行高；LaTeX 公式随字体 1em 缩放 */
-  .flashcard.flipped .face{font-size:18px;font-weight:600;line-height:1.8}
+  .flashcard.flipped .face{font-size:calc(18px * var(--fs,1));font-weight:600;line-height:calc(1.8 * var(--lh,1))}
   .flashcard .face .katex,.split-pane .face .katex{font-size:1em}
   .feedback{display:flex;gap:10px;margin-top:14px}
   .feedback .fb{flex:1;border:none;border-radius:var(--radius-s);padding:13px;font-size:14px;font-weight:700;cursor:pointer;color:#fff}
@@ -252,13 +253,16 @@
   .split-pane{flex:1;min-width:0;background:#fff;border-radius:14px;padding:20px 16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column}
   .split-pane .split-h{font-size:12px;font-weight:800;color:var(--text-3);letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
   .split-pane.ans .split-h{color:var(--primary)}
-  .split-pane .face{font-size:18px;font-weight:700;line-height:1.6;white-space:pre-wrap;word-break:break-word;width:100%;flex:1;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-  .split-pane .face.para{display:block;text-align:left}
+  .split-pane .face{font-size:calc(18px * var(--fs,1));font-weight:700;line-height:calc(1.6 * var(--lh,1));white-space:pre-wrap;word-break:break-word;width:100%;
+    margin-block:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .split-pane .face.para{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left}
   .split-pane .face.para img{margin:10px 0}
-  .split-pane.ans .face{font-size:16px;font-weight:600;line-height:1.85}
+  /* 闪卡（翻面 / 遮挡 / 自检）：多行或分段时整区垂直居中、段落文字左对齐，避免居中割裂 */
+  .flashcard .face.para{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left}
+  .flashcard .face.para img{margin:10px 0}
+  .split-pane.ans .face{font-size:calc(16px * var(--fs,1));font-weight:600;line-height:calc(1.85 * var(--lh,1))}
   .split-pane .face img{max-width:100%;max-height:42vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
-  @media (max-width:767px){ .split-card{flex-direction:column} .split-pane{min-height:150px} }
+  @media (max-width:767px){ .split-card{flex-direction:column} .split-pane{min-height:150px} .self-card .flashcard{min-height:210px} }
   /* 分栏对照：答案初始关闭（空白），点击翻转为背面答案 */
   .split-pane.closed{cursor:pointer;border:2px dashed var(--border);
     background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 12px,#f1f5f9 12px,#f1f5f9 24px)}
@@ -272,10 +276,18 @@
 
   /* PC（≥768px）：卡片左右等分双栏、宽度自适应并限制最大宽度；按钮横向紧凑排布，清除多余空白 */
   @media (min-width:768px){
-    .flashcard{max-width:680px;margin-inline:auto}     /* 自适应带宽 + 限制最大宽度，居中 */
-    .split-card{max-width:780px;margin-inline:auto}     /* 与 .app 容器对齐，双栏等宽 */
-    .split-pane{min-height:200px}                        /* 单行短文本也保留上下留白 */
-    .self-pane{max-width:680px;margin:14px auto 0}        /* 与闪卡等宽、居中，独立成卡 */
+    .flashcard{width:85%;max-width:1600px;margin-inline:auto;min-height:clamp(440px,58vh,760px)}   /* 占屏 85%；PC 拉高容器充分利用下方空白，内容溢出自动撑开 */
+    .split-card{width:85%;max-width:1600px;margin-inline:auto}  /* 与 .app 容器对齐，双栏等宽 */
+    /* 自检模式：PC 大屏左右双栏（左题目卡 / 右默写区）并排，整体加宽、去除两侧多余留白 */
+    .self-card{width:92%;max-width:1760px;margin-inline:auto}
+    .self-card .flashcard{width:auto;max-width:none;margin:0;flex:1;min-width:0;cursor:default}
+    .self-card .self-pane{width:auto;max-width:none;margin:0;flex:1;min-width:0}
+    .split-pane{min-height:clamp(440px,58vh,760px)}      /* 单行短文本也维持高度，双栏等高并排 */
+    /* 文字与公式随屏幕宽度自适应缩放，避免大屏留白浪费（再叠加阅读设置字号/行距倍数） */
+    .flashcard .face{font-size:calc(clamp(19px,1.5vw,30px) * var(--fs,1));line-height:calc(1.55 * var(--lh,1))}
+    .flashcard.flipped .face{font-size:calc(clamp(18px,1.45vw,29px) * var(--fs,1));font-weight:600;line-height:calc(1.8 * var(--lh,1))}
+    .split-pane .face{font-size:calc(clamp(18px,1.4vw,28px) * var(--fs,1));line-height:calc(1.5 * var(--lh,1))}
+    .split-pane.ans .face{font-size:calc(clamp(16px,1.3vw,26px) * var(--fs,1));line-height:calc(1.7 * var(--lh,1))}
     /* 评级 / 切换按钮：横向紧凑排布，不再拉伸占满，去掉多余间隙 */
     .feedback{justify-content:center;flex-wrap:wrap}
     .feedback .fb{flex:0 0 auto;padding:11px 22px}
@@ -345,6 +357,8 @@
   .disp-seg .q{flex:0 0 auto;text-align:center;padding:8px 12px;font-size:12px;font-weight:600;color:var(--text-3);border-radius:7px;cursor:pointer}
   .disp-seg .q.active{background:#fff;color:var(--primary);box-shadow:var(--shadow)}
   .occlude-wrap{position:relative;width:100%}
+  /* 分栏对照（左右对照）里的遮挡答案：遮罩只覆盖文字区域（紧贴 .face），整体在右栏内垂直居中 */
+  .split-pane .occlude-wrap{display:block;flex:0 0 auto;width:100%;margin-block:auto;min-height:0}
   .occlude-mask{position:absolute;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 12px,#cbd5e1 12px,#cbd5e1 24px);
     border-top:2px dashed #94a3b8;cursor:grab}
   .occlude-handle{position:absolute;right:6px;top:-13px;background:#475569;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;user-select:none;touch-action:none;white-space:nowrap}
@@ -353,7 +367,7 @@
   .self-pane{margin-top:14px}                            /* 自检输入/结果独立成卡，置于卡面下方 */
   .self-box textarea{width:100%;font-size:15px;line-height:1.6}
   .self-box .btn{margin-top:10px}
-  .self-ans{font-size:14px;line-height:1.6;color:var(--text-2);background:#f8fafc;border-radius:8px;padding:8px 10px}
+  .self-ans{font-size:calc(14px * var(--fs,1));line-height:1.6;color:var(--text-2);background:#f8fafc;border-radius:8px;padding:8px 10px}
   .self-res{margin-top:10px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px}
   .self-res.pass{border-color:var(--green)}
   .self-res.fail{border-color:var(--orange)}
@@ -364,7 +378,20 @@
   .kw{font-size:12px;padding:3px 9px;border-radius:20px;font-weight:600}
   .kw.hit{background:var(--green-light);color:var(--green-dark)}
   .kw.miss{background:#f1f5f9;color:var(--text-3);text-decoration:line-through}
-  .self-full{font-size:14px;line-height:1.6;color:var(--text-2)}
+  .self-full{font-size:calc(14px * var(--fs,1));line-height:1.6;color:var(--text-2)}
+  /* ===== 阅读设置（字号 / 行距 / 左右对照）===== */
+  #view-study.fs-small{--fs:.82}
+  #view-study.fs-large{--fs:1.22}
+  #view-study.lh-compact{--lh:.82}
+  #view-study.lh-loose{--lh:1.22}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:16px 0}
+  .set-lb{font-size:14px;font-weight:700}
+  .set-sub{font-size:11px;color:var(--text-3);font-weight:500;margin-top:3px;line-height:1.4}
+  .set-row .queue-seg{flex:1;max-width:240px;margin:0}
+  .switch{width:46px;height:26px;border-radius:20px;background:#cbd5e1;border:none;position:relative;cursor:pointer;transition:.2s;flex:0 0 auto;padding:0}
+  .switch.on{background:var(--primary)}
+  .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .switch.on .knob{left:23px}
   .modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
   .modal-mask.show{display:flex}
   .modal-mask.lvl2{z-index:95}
@@ -596,10 +623,10 @@
 
   /* ===== 响应式：移动 / PC + 横屏 / 竖屏 ===== */
   .app{max-width:780px}
-  @media (min-width:1080px){ .app{max-width:860px} }
-  /* PC 横屏：进一步利用横向宽度，单栏内容整体加宽（不做多列） */
-  @media (orientation:landscape) and (min-width:1100px){ .app{max-width:1080px} }
-  @media (orientation:landscape) and (min-width:1600px){ .app{max-width:1240px} }
+  /* PC 大屏：整体加宽利用横向空间，卡片占屏 80–85%、左右只留少量边距 */
+  @media (min-width:1080px){ .app{max-width:min(1700px,94vw)} }
+  /* PC 横屏超大屏：进一步放宽，但限制最大宽度保证可读性 */
+  @media (orientation:landscape) and (min-width:1600px){ .app{max-width:min(1800px,92vw)} }
   /* 顶部栏与内容区适配刘海 / 灵动岛安全区 */
   .topbar{padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px;
           padding-left:calc(18px + env(safe-area-inset-left,0px));padding-right:calc(18px + env(safe-area-inset-right,0px))}
@@ -1521,6 +1548,7 @@ function openStudyMenu(){
   const items=[
     {icon:'⚙',label:'背诵设置',sub:studyState.global?'退出后重进可改范围':'范围 / 标签 / 顺序 / 默写方式',onclick:"openStudyConfigFromStudy()"},
     {icon:'📝',label:'记问题',sub:'记录背诵中的疑问',onclick:"quickMemoFromStudy()"},
+    {icon:'🔠',label:'阅读设置',sub:'字体 / 行距 / 左右对照',onclick:"openStudyReadSettings()"},
     {icon:'✍️',label:'默写方式：'+dispMap[studyState.display],sub:'翻面 / 遮挡 / 自检',onclick:"openStudyDispMenu()"},
   ];
   if(!studyState.global){
@@ -1534,8 +1562,31 @@ function openStudyDispMenu(){
     {icon:'🔄',label:'翻面',sub:studyState.display==='flip'?'当前':'',onclick:"setStudyDisplay('flip')"},
     {icon:'🙈',label:'遮挡',sub:studyState.display==='occlude'?'当前':'',onclick:"setStudyDisplay('occlude')"},
     {icon:'✍️',label:'自检',sub:studyState.display==='self'?'当前':'',onclick:"setStudyDisplay('self')"},
-    {icon:'🗂',label:'分栏对照',sub:studyState.display==='split'?'当前 · 左问题右答案，大屏对照':'左问题右答案，适合平板/电脑',onclick:"setStudyDisplay('split')"},
   ]);
+}
+/* 阅读设置弹窗：字体大小 / 行间距 / 左右对照开关 */
+function openStudyReadSettings(){
+  closeSheet();
+  const seg=(key,opts)=>'<div class="queue-seg" data-seg="'+key+'">'+opts.map(o=>
+    '<div class="q '+(READ[key]===o.v?'active':'')+'" data-v="'+o.v+'" onclick="setRead(\''+key+'\',\''+o.v+'\')">'+o.l+'</div>').join('')+'</div>';
+  document.getElementById('modal-body').innerHTML=
+    '<div class="modal-title">🔠 阅读设置</div>'
+    +'<div class="set-row"><div class="set-lb">字体大小</div>'+seg('fs',[{v:'small',l:'小'},{v:'standard',l:'标准'},{v:'large',l:'大'}])+'</div>'
+    +'<div class="set-row"><div class="set-lb">行间距</div>'+seg('lh',[{v:'compact',l:'紧凑'},{v:'standard',l:'标准'},{v:'loose',l:'宽松'}])+'</div>'
+    +'<div class="set-row"><div class="set-lb">左右对照模式<div class="set-sub">开启后大屏左右双栏对照；关闭则单栏，由上方「默写方式」决定</div></div>'
+    +'<button class="switch '+(READ.splitOn?'on':'')+'" onclick="toggleReadSplit(this)"><span class="knob"></span></button></div>'
+    +'<div class="modal-actions"><button class="btn btn-ghost" onclick="hideModal()">关闭</button></div>';
+  showModal();
+}
+function setRead(key,val){
+  READ[key]=val;saveRead();applyRead();renderStudy();
+  const seg=document.querySelector('#modal-body .queue-seg[data-seg="'+key+'"]');
+  if(seg)seg.querySelectorAll('.q').forEach(q=>q.classList.toggle('active',q.dataset.v===val));
+}
+function toggleReadSplit(btn){
+  READ.splitOn=!READ.splitOn;saveRead();
+  btn.classList.toggle('on',READ.splitOn);
+  renderStudy();
 }
 function openStudyScopeMenu(){
   const d=getDeck(studyState.deckId)||{cards:[]};const cs=d.cards||[];
@@ -1873,7 +1924,7 @@ const TYPE_LABEL={single:'单选',multiple:'多选',judge:'判断'};
 const TYPE_BADGE={single:'badge-s',multiple:'badge-m',judge:'badge-j'};
 /* 卡片背诵「默写方式」标签 */
 const DISP_LABEL={flip:'翻面',occlude:'遮挡',self:'自检'};
-const DISP_BADGE={flip:'badge-disp',occlude:'badge-disp',self:'badge-disp',split:'badge-disp'};
+const DISP_BADGE={flip:'badge-disp',occlude:'badge-disp',self:'badge-disp'};
 /* 卡片标签 / 重难点分级 */
 /* 卡片标签：可自定义（增 / 改名 / 改图标 / 删除）。默认种子写入 DB.meta.tags 持久化，
    卡片 / 批量标签 / 背诵设置 全部读同一来源，标签改名后各处自动同步。 */
@@ -3278,6 +3329,17 @@ const INTERVALS=CYCLES.standard.days; // 兼容旧引用
 function cycleDays(deck){const k=(deck&&deck.cycle&&CYCLES[deck.cycle])?deck.cycle:'standard';return CYCLES[k].days;}
 function cycleForCard(card){const d=DB.decks.find(d=>(d.cards||[]).some(c=>c.id===card.id));return cycleDays(d);}
 let studyState={deckId:null,queue:[],idx:0,flipped:false,mode:'sequential',tags:null,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false};
+/* 阅读设置（字号 / 行距 / 左右对照开关），全局持久化到 DB.meta.studyRead */
+let READ=(DB.meta&&DB.meta.studyRead)||{fs:'standard',lh:'standard',splitOn:true};
+function saveRead(){DB.meta.studyRead=READ;save();}
+function applyRead(){
+  const el=document.getElementById('view-study');if(!el)return;
+  el.classList.remove('fs-small','fs-large','lh-compact','lh-loose');
+  if(READ.fs==='small')el.classList.add('fs-small');
+  else if(READ.fs==='large')el.classList.add('fs-large');
+  if(READ.lh==='compact')el.classList.add('lh-compact');
+  else if(READ.lh==='loose')el.classList.add('lh-loose');
+}
 function dueCardQueue(deck){
   const due=(deck.cards||[]).filter(c=>(c.nextReview||0)<=now() && !isCardEmpty(c));
   // sort by nextReview asc
@@ -3416,6 +3478,8 @@ function recordDaily(kind){
 }
 function renderStudy(){
   const v=document.getElementById('view-study');
+  if(studyState.display==='split')studyState.display='flip';   // 兼容旧版「分栏对照」持久化状态
+  applyRead();
   const isGlobal=!!studyState.global;
   const d=isGlobal?{id:'__all__',name: studyState.deckId==='__fav__'?'⭐ 收藏夹复习':'今日复习 · 全部卡组'}:getDeck(cur.deckId=studyState.deckId);
   const q=studyState.queue;
@@ -3432,7 +3496,7 @@ function renderStudy(){
       <button class="btn btn-primary" style="margin-top:18px" onclick="goBack()">返回</button></div>`;return;
   }
   const card=q[studyState.idx];const total=q.length;
-  const dispLabelMap={flip:'翻面',occlude:'遮挡',self:'自检',split:'对照'};
+  const dispLabelMap={flip:'翻面',occlude:'遮挡',self:'自检'};
   const dispKey=studyState.display||'flip';
   v.innerHTML=`
     <div class="row between" style="margin-bottom:10px;gap:8px">
@@ -3445,46 +3509,108 @@ function renderStudy(){
     <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${studyState.idx+1}/${total} 张卡</span>
       <div class="q-bar"><div style="width:${Math.round(studyState.idx/total*100)}%"></div></div></div>
     ${studyCardHtml(card)}
-    ${(studyState.flipped||dispKey==='split')?studyFeedbackHtml(card):''}
+    ${(studyState.flipped||(dispKey==='occlude'&&pcWide()))?studyFeedbackHtml(card):''}
     <div class="nav-row">
       <button class="btn btn-ghost" ${studyState.idx>0?'':'disabled'} onclick="studyPrev()">◀ 上一张</button>
       <span class="nav-mid">${studyState.idx+1} / ${total}</span>
       <button class="btn btn-ghost" ${studyState.idx+1<total?'':'disabled'} onclick="studyNext()">下一张 ▶</button>
     </div>`;
-  /* 分栏对照：文字少时居中留白；文字多（分段/换行）时自动左对齐 */
-  if(studyState.display==='split'){
+  /* 卡片文字：单行短句整体居中留白；多行/分段时整区垂直居中、段落左对齐，避免阅读割裂 */
+  v.querySelectorAll('.flashcard .face').forEach(el=>{
+    const cs=getComputedStyle(el);
+    const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.6);
+    if(el.scrollHeight/lh>1.4)el.classList.add('para');else el.classList.remove('para');
+  });
+  if(compareOn()){
     v.querySelectorAll('.split-pane .face').forEach(el=>{
       const cs=getComputedStyle(el);
       const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.6);
-      if(el.scrollHeight/lh>1.4)el.classList.add('para');
+      if(el.scrollHeight/lh>1.4)el.classList.add('para');else el.classList.remove('para');
     });
   }
 }
 function linksNoteHtml(card){return linksHtml(card.links)+noteHtml(card.note);}
 function studyCardExtras(card){return studyExtHtml(card)+linksHtml(card.links)+noteHtml(card.note);}
-function studyCardHtml(card){
-  const disp=studyState.display;
-  // 分栏对照模式：左问题常显，右侧答案初始关闭（空白），点击翻转显示背面答案
-  if(disp==='split'){
-    const backOpen=!!studyState.flipped;
-    const ansHead=`<div class="split-h">✅ 答案${backOpen?'':'<span class="split-tip">（点击显示）</span>'}</div>`;
-    const ansBody=backOpen
-      ? `<div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>`
-      : `<div class="split-closed"><div class="sc-em">❓</div><div class="sc-t">点击显示答案</div></div>`;
-    return `<div class="split-card">
-      <div class="split-pane">
-        <div class="split-h">📋 问题</div>
-        <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front">${toRich(face(card))}</div>
+/* 是否大屏（≥768px）：大屏下翻面 / 遮挡也采用左右双栏对照布局 */
+function pcWide(){return (window.innerWidth||document.documentElement.clientWidth)>=768;}
+/* PC 双栏：翻面模式左右对照（左问题常显，右答案点击揭示） */
+function flipSplitHtml(card){
+  const backOpen=!!studyState.flipped;
+  const ansHead=`<div class="split-h">✅ 答案${backOpen?'':'<span class="split-tip">（点击显示）</span>'}</div>`;
+  const ansBody=backOpen
+    ? `<div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>`
+    : `<div class="split-closed"><div class="sc-em">❓</div><div class="sc-t">点此显示答案</div></div>`;
+  return `<div class="split-card">
+    <div class="split-pane" id="flash">
+      <div class="split-h">📋 问题</div>
+      <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front">${toRich(face(card))}</div>
+    </div>
+    <div class="split-pane ans ${backOpen?'open':'closed'}" onclick="splitRevealBack(event)" role="button" tabindex="0" aria-label="点击显示答案">
+      ${ansHead}${ansBody}
+    </div>
+  </div>
+  ${studyCardExtras(card)}`;
+}
+/* PC 双栏：遮挡模式左右对照（左问题常显，右答案遮罩，拖动掀开） */
+function occludeSplitHtml(card){
+  const reveal=studyState.reveal||0;
+  return `<div class="split-card">
+    <div class="split-pane" id="flash">
+      <div class="split-h">📋 问题</div>
+      <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front">${toRich(face(card))}</div>
+    </div>
+    <div class="split-pane ans">
+      <div class="split-h">✅ 答案<div class="split-tip">拖动掀开</div></div>
+      <div class="occlude-wrap" id="ocWrap">
+        <div class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="back">${fmtAnswer(back(card))}</div>
+        <div class="occlude-mask" id="ocMask" style="height:${100-reveal}%">
+          <div class="occlude-handle" id="ocHandle" onpointerdown="ocStart(event)">✥ 拖动掀开</div>
+        </div>
       </div>
-      <div class="split-pane ans ${backOpen?'open':'closed'}" onclick="splitRevealBack(event)" role="button" tabindex="0" aria-label="点击显示答案">
-        ${ansHead}
-        ${ansBody}
+      <div class="occlude-ctrls">
+        <button class="btn btn-ghost btn-sm" onclick="ocSet(0)">盖回</button>
       </div>
     </div>
-    ${studyCardExtras(card)}`;
-  }
+  </div>
+  ${studyCardExtras(card)}`;
+}
+/* 左右对照开关 + 大屏：决定是否采用左右双栏对照布局（由「阅读设置」中的左右对照开关统一控制，不再是默写方式里独立的一项） */
+function compareOn(){return READ.splitOn && pcWide();}
+/* PC 双栏：自检模式（左问题卡 / 右默写输入或核对结果） */
+function selfSplitHtml(card){
+  const flipped=!!studyState.flipped, r=studyState.selfRes;
+  const faceAttr=`class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="front"`;
+  const pane=flipped
+    ? `<div class="split-h">✅ 核对结果</div>
+       <div class="self-box">
+         <div class="self-ans"><b>你的答案：</b>${studyState.selfAns&&studyState.selfAns.trim()?esc(studyState.selfAns):'<span class="muted">(空)</span>'}</div>
+         ${selfResultHtml(card,r)}
+         <button class="btn btn-ghost btn-sm" onclick="selfRetry('${card.id}')">↺ 重答</button>
+       </div>
+       ${studyCardExtras(card)}`
+    : `<div class="split-h">✍️ 我的答案</div>
+       <div class="self-box">
+         <textarea id="selfAns" class="inp" rows="3" placeholder="凭记忆默写…">${esc(studyState.selfAns||'')}</textarea>
+         <button class="btn btn-primary" onclick="selfCheck('${card.id}')">核对答案</button>
+       </div>`;
+  return `<div class="split-card self-card">
+    <div class="flashcard self-left" id="flash">
+      <div ${faceAttr}>${toRich(face(card))}</div>
+    </div>
+    <div class="split-pane self-pane">${pane}</div>
+  </div>`;
+}
+function studyCardHtml(card){
+  const disp=studyState.display;
   const fld = disp==='self' ? 'front' : (studyState.flipped?'back':'front');
   const faceAttr=`class="face selectable" data-store data-store-kind="card" data-store-id="${card.id}" data-store-field="${fld}"`;
+  // 开启左右对照且为大屏：翻面 / 遮挡 / 自检 三种模式统一左右双栏对照
+  if(compareOn()){
+    if(disp==='occlude')return occludeSplitHtml(card);  // 左问题 / 右答案遮罩
+    if(disp==='self')return selfSplitHtml(card);         // 左问题 / 右默写输入
+    return flipSplitHtml(card);                          // 左问题 / 右答案（点击揭示），含翻面默认
+  }
+  // 单栏（移动端，或已关闭左右对照）：按所选默写方式呈现
   if(disp==='occlude'){
     if(!studyState.flipped){
       return `<div class="flashcard" id="flash" onclick="flipCard(event)">
@@ -3514,7 +3640,6 @@ function studyCardHtml(card){
       </div>
       <div class="split-pane self-pane">
         <div class="split-h">✍️ 我的答案</div>
-        <div class="muted sm" style="margin:2px 0 10px">凭记忆写出答案，点「核对」比对关键词</div>
         <div class="self-box">
           <textarea id="selfAns" class="inp" rows="3" placeholder="凭记忆默写…">${esc(studyState.selfAns||'')}</textarea>
           <button class="btn btn-primary" onclick="selfCheck('${card.id}')">核对答案</button>
