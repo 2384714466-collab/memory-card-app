@@ -252,7 +252,10 @@
   .split-pane{flex:1;min-width:0;background:#fff;border-radius:14px;padding:20px 16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column}
   .split-pane .split-h{font-size:12px;font-weight:800;color:var(--text-3);letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
   .split-pane.ans .split-h{color:var(--primary)}
-  .split-pane .face{font-size:18px;font-weight:700;line-height:1.6;white-space:pre-wrap;word-break:break-word;width:100%;flex:1}
+  .split-pane .face{font-size:18px;font-weight:700;line-height:1.6;white-space:pre-wrap;word-break:break-word;width:100%;flex:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .split-pane .face.para{display:block;text-align:left}
+  .split-pane .face.para img{margin:10px 0}
   .split-pane.ans .face{font-size:16px;font-weight:600;line-height:1.85}
   .split-pane .face img{max-width:100%;max-height:42vh;height:auto;border-radius:10px;display:block;margin:10px auto;box-shadow:var(--shadow)}
   @media (max-width:767px){ .split-card{flex-direction:column} .split-pane{min-height:150px} }
@@ -272,6 +275,7 @@
     .flashcard{max-width:680px;margin-inline:auto}     /* 自适应带宽 + 限制最大宽度，居中 */
     .split-card{max-width:780px;margin-inline:auto}     /* 与 .app 容器对齐，双栏等宽 */
     .split-pane{min-height:200px}                        /* 单行短文本也保留上下留白 */
+    .self-pane{max-width:680px;margin:14px auto 0}        /* 与闪卡等宽、居中，独立成卡 */
     /* 评级 / 切换按钮：横向紧凑排布，不再拉伸占满，去掉多余间隙 */
     .feedback{justify-content:center;flex-wrap:wrap}
     .feedback .fb{flex:0 0 auto;padding:11px 22px}
@@ -346,6 +350,7 @@
   .occlude-handle{position:absolute;right:6px;top:-13px;background:#475569;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;user-select:none;touch-action:none;white-space:nowrap}
   .occlude-ctrls{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;justify-content:center}
   .self-box{width:100%;margin-top:14px;text-align:left}
+  .self-pane{margin-top:14px}                            /* 自检输入/结果独立成卡，置于卡面下方 */
   .self-box textarea{width:100%;font-size:15px;line-height:1.6}
   .self-box .btn{margin-top:10px}
   .self-ans{font-size:14px;line-height:1.6;color:var(--text-2);background:#f8fafc;border-radius:8px;padding:8px 10px}
@@ -3446,6 +3451,14 @@ function renderStudy(){
       <span class="nav-mid">${studyState.idx+1} / ${total}</span>
       <button class="btn btn-ghost" ${studyState.idx+1<total?'':'disabled'} onclick="studyNext()">下一张 ▶</button>
     </div>`;
+  /* 分栏对照：文字少时居中留白；文字多（分段/换行）时自动左对齐 */
+  if(studyState.display==='split'){
+    v.querySelectorAll('.split-pane .face').forEach(el=>{
+      const cs=getComputedStyle(el);
+      const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.6);
+      if(el.scrollHeight/lh>1.4)el.classList.add('para');
+    });
+  }
 }
 function linksNoteHtml(card){return linksHtml(card.links)+noteHtml(card.note);}
 function studyCardExtras(card){return studyExtHtml(card)+linksHtml(card.links)+noteHtml(card.note);}
@@ -3476,7 +3489,7 @@ function studyCardHtml(card){
     if(!studyState.flipped){
       return `<div class="flashcard" id="flash" onclick="flipCard(event)">
         <div ${faceAttr}>${toRich(face(card))}</div>
-        <div class="hint">👆 点一下开始默写（背面已遮挡，可逐段掀开）</div></div>`;
+        <div class="hint">👆 点一下开始默写</div></div>`;
     }
     const reveal=studyState.reveal||0;
     return `<div class="flashcard" id="flash">
@@ -3498,7 +3511,10 @@ function studyCardHtml(card){
     if(!studyState.flipped){
       return `<div class="flashcard" id="flash">
         <div ${faceAttr}>${toRich(face(card))}</div>
-        <div class="hint">✍️ 在下方写出答案，点「核对」比对关键词</div>
+      </div>
+      <div class="split-pane self-pane">
+        <div class="split-h">✍️ 我的答案</div>
+        <div class="muted sm" style="margin:2px 0 10px">凭记忆写出答案，点「核对」比对关键词</div>
         <div class="self-box">
           <textarea id="selfAns" class="inp" rows="3" placeholder="凭记忆默写…">${esc(studyState.selfAns||'')}</textarea>
           <button class="btn btn-primary" onclick="selfCheck('${card.id}')">核对答案</button>
@@ -3508,6 +3524,9 @@ function studyCardHtml(card){
     const r=studyState.selfRes;
     return `<div class="flashcard" id="flash">
       <div ${faceAttr}>${toRich(face(card))}</div>
+    </div>
+    <div class="split-pane self-pane">
+      <div class="split-h">✅ 核对结果</div>
       <div class="self-box">
         <div class="self-ans"><b>你的答案：</b>${studyState.selfAns&&studyState.selfAns.trim()?esc(studyState.selfAns):'<span class="muted">(空)</span>'}</div>
         ${selfResultHtml(card,r)}
@@ -4141,7 +4160,6 @@ function renderPlan(){
         ?`📊 每日目标合计：${[baseC?`背卡 <b>${baseC}</b> 张`:'',baseQ?`刷题 <b>${baseQ}</b> 题`:''].filter(Boolean).join(' · ')}（多套计划自动累加${(baseC&&baseQ)?'':'；另一项未设置'}）`
         :`📊 当前只做考试倒计时，未设每日目标（可在计划里随时补上）`}</div>`:'')+`</div>`+
     `<div class="plan-sec"><div class="ph">🎯 每日目标进度</div>${goalBarsHtml()}</div>`+
-    `<div class="plan-sec"><div class="ph">🔥 考前冲刺清单 <span class="muted sm">近 5 天记不熟的卡片</span></div>${sprintHtml()}</div>`+
     `<div class="plan-sec"><div class="ph">📆 学习日历</div>${calendarHtml()}</div>`;
 }
 /* 备考计划增删改（多套独立计划） */
