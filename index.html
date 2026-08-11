@@ -784,7 +784,7 @@
     <div class="view active" id="view-home">
       <div class="home-mods" id="home-mods">
         <div class="card" id="plan-home"></div>
-        <button class="btn btn-primary btn-block" style="padding:15px;font-size:16px" onclick="startToday()">🎯 开始复习今日</button>
+        <button class="btn btn-primary btn-block" id="btn-start-today" style="padding:15px;font-size:16px" onclick="startToday()">🎯 开始复习今日</button>
         <div class="stat-grid">
           <div class="stat"><div class="n" id="hm-due">0</div><div class="l">📝 今日待复习卡片</div></div>
           <div class="stat"><div class="n g" id="hm-quiz">0</div><div class="l">✅ 今日已刷题</div></div>
@@ -939,7 +939,7 @@ function loadDB(){
     (dk.cards||[]).forEach(c=>{ if(c.links===undefined)c.links=[]; if(c.note===undefined)c.note=''; if(c.ext===undefined)c.ext=''; });});
     return d;
   }
-  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
+  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},reviewSession:null,plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
 }
 /* 兼容旧数据：把单一 goals + 多 exams 合并成多套独立备考计划 plans。
    每个旧 exam → 一套「只有倒计时、不设每日目标」的计划（目标可不填，避免多套考试把目标累加翻倍）；
@@ -1946,6 +1946,7 @@ const viewScroll={};                             // 每个视图离开时保存�
 function activeView(){const a=document.querySelector('.view.active');return a&&a.id?a.id.replace('view-',''):null;}
 function go(view,record=true){
   const leaving=activeView();
+  if(leaving==='study'||leaving==='quiz')saveReviewSession(); // 离开复习/刷题页时持久化进度，便于续练
   if(leaving)viewScroll[leaving]=window.scrollY||document.documentElement.scrollTop||0;  // 离开前保存当前滚动位置（文档滚动）
   if(record){const cur=activeView();if(cur&&cur!==view){navStack.push(cur);if(navStack.length>30)navStack.shift();}}
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -2006,6 +2007,12 @@ function dueCards(){
 function renderHome(){
   document.getElementById('hm-due').textContent=dueCards();
   document.getElementById('hm-quiz').textContent=DB.meta.quizDays[todayKey()]||0;
+  const bt=document.getElementById('btn-start-today');
+  if(bt){
+    const rem=reviewRemaining();
+    if(rem>0){bt.textContent='🔄 继续复习今日（剩 '+rem+' 项）';}
+    else{bt.textContent='🎯 开始复习今日';}
+  }
   renderHomePlan();
   const list=document.getElementById('deck-list');
   const secs=[];
@@ -2097,7 +2104,64 @@ function deckTagStats(d){
     return {key:t.key,icon:t.icon,label:t.label,total,due};
   }).filter(s=>s.total>0);
 }
+/* =================== 复习会话持久化（开始复习今日：退出可续练） =================== */
+/* 把当前「开始复习今日」进度存盘：卡片阶段存 studyState，错题阶段存 quiz */
+function saveReviewSession(){
+  if(studyState && studyState.review && studyState.queue && studyState.queue.length){
+    const st=studyState;
+    DB.meta.reviewSession={active:true,phase:'study',study:{
+      deckId:st.deckId, queueIds:st.queue.map(c=>({id:c.id})), idx:st.idx,
+      flipped:!!st.flipped, mode:st.mode, scope:st.scope, order:st.order, global:st.global,
+      display:st.display, reveal:st.reveal||0, selfAns:st.selfAns||'', selfRes:st.selfRes||null, noteOpen:!!st.noteOpen,
+      afterWrongIds:(st.afterWrong||[]).map(q=>({id:q.id}))}};
+    save();return;
+  }
+  if(quiz && quiz.review && quiz.queue && quiz.queue.length){
+    const qz=quiz;
+    DB.meta.reviewSession={active:true,phase:'quiz',quiz:{
+      deckId:qz.deckId, queueIds:qz.queue.map(q=>({id:q.id})), idx:qz.idx,
+      mode:qz.mode, range:qz.range, types:qz.types, sel:qz.sel||[], submitted:qz.submitted,
+      guess:qz.guess, rGuess:qz.rGuess||0, rLucky:qz.rLucky||0, shuffle:qz.shuffle, orders:qz.orders||{}}};
+    save();return;
+  }
+  // 注意：此处不清除已有会话——未完成则保留以便续练，仅由 clearReviewSession 在整轮完成时清除
+}
+/* 恢复未完成的复习会话（卡片阶段或错题阶段），返回是否成功恢复 */
+function resumeReviewSession(){
+  const rs=DB.meta.reviewSession;
+  if(!rs||!rs.active)return false;
+  if(rs.phase==='study'){
+    const st=rs.study;const q=(st.queueIds||[]).map(o=>findCard(o.id)).filter(Boolean);
+    if(!q.length){DB.meta.reviewSession=null;save();return false;}
+    const aw=(st.afterWrongIds||[]).map(o=>findQuestion(o.id)).filter(Boolean);
+    studyState={deckId:st.deckId,queue:q,idx:Math.min(Math.max(st.idx,0),q.length),flipped:st.flipped,mode:st.mode,scope:st.scope,order:st.order,global:st.global,
+      afterWrong:aw,display:st.display,reveal:st.reveal,selfAns:st.selfAns,selfRes:st.selfRes,noteOpen:st.noteOpen,review:true};
+    go('study');renderStudy();return true;
+  }
+  if(rs.phase==='quiz'){
+    const qz=rs.quiz;const q=(qz.queueIds||[]).map(o=>findQuestion(o.id)).filter(Boolean);
+    if(!q.length){DB.meta.reviewSession=null;save();return false;}
+    quiz={deckId:qz.deckId,queue:q,idx:Math.min(Math.max(qz.idx,0),q.length),mode:qz.mode,range:qz.range,types:qz.types,sel:qz.sel||[],submitted:qz.submitted,
+      guess:qz.guess,rGuess:qz.rGuess||0,rLucky:qz.rLucky||0,shuffle:qz.shuffle,orders:qz.orders||{},global:true,review:true};
+    go('quiz');renderQuiz();return true;
+  }
+  return false;
+}
+/* 一轮复习全部完成：清掉持久化会话，并撤掉 review 标记，避免被再次保存 */
+function clearReviewSession(){
+  if(studyState)studyState.review=false;
+  if(quiz)quiz.review=false;
+  DB.meta.reviewSession=null;save();
+}
+function reviewRemaining(){
+  const rs=DB.meta.reviewSession;if(!rs||!rs.active)return 0;
+  if(rs.phase==='study'){const st=rs.study;return Math.max(0,(st.queueIds||[]).length-st.idx)+((st.afterWrongIds||[]).length||0);}
+  if(rs.phase==='quiz'){const qz=rs.quiz;return Math.max(0,(qz.queueIds||[]).length-qz.idx);}
+  return 0;
+}
 function startToday(){
+  // 若有未完成的复习会话（卡片或错题阶段），先恢复续练
+  if(DB.meta.reviewSession&&DB.meta.reviewSession.active){ if(resumeReviewSession())return; }
   settleBuffer();                                  // 进入复习前先结算配额缓冲
   // 汇总所有卡组的到期卡片 + 错题，直接进入复习，不跳编辑页
   const dueCards=[];const wrongQs=[];
@@ -2116,17 +2180,21 @@ function startToday(){
   updateStreak();
   if(dueCards.length){
     // 先背全部到期卡，背完再刷全部错题
-    studyState={deckId:'__all__',queue:dueCards,idx:0,flipped:false,mode:'due',scope:'due',order:'seq',global:true,afterWrong:wrongQs,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false};
+    studyState={deckId:'__all__',queue:dueCards,idx:0,flipped:false,mode:'due',scope:'due',order:'seq',global:true,afterWrong:wrongQs,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false,review:true};
+    saveReviewSession();
     if(planN)toast('已优先加入 '+planN+' 个薄弱点复习 ✅');
     go('study');renderStudy();
   }else{
-    startGlobalQuiz(wrongQs);
+    startGlobalQuiz(wrongQs,true);
   }
 }
-function startGlobalQuiz(qs){
+function startGlobalQuiz(qs,review){
   qs=qs||(studyState.afterWrong||[]);
   if(!qs||!qs.length){toast('没有错题需要刷');go('home');return;}
-  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'wrong',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true};
+  const isReview=(review!==undefined)?review:!!(studyState&&studyState.review);
+  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'wrong',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true,review:isReview};
+  if(studyState&&studyState.review)studyState.review=false; // 卡片阶段已结束，转交 quiz 接管会话
+  saveReviewSession();
   go('quiz');renderQuiz();
 }
 function findDeckOfQuestion(qid){
@@ -2369,7 +2437,7 @@ function parseCardsTwoLine(lines){
   }
   return out;
 }
-function mkCard(front,back){return {id:uid(),front,back,box:1,nextReview:now(),lastReviewed:null,reviews:0,correct:0,easy:false,hard:false,forgot:false,fav:false,tags:[],links:[],note:'',ext:''};}
+function mkCard(front,back){return {id:uid(),front,back,box:1,nextReview:now()+3650*86400000,lastReviewed:null,reviews:0,correct:0,easy:false,hard:false,forgot:false,fav:false,tags:[],links:[],note:'',ext:''};}
 
 /* ---- PREVIEW (editable) ---- */
 function renderPreview(){
@@ -3565,7 +3633,11 @@ function grade(level){
   card.nextReview=now()+days*86400000;
   card.lastReviewed=now();
   save();
-  studyState.idx++;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;renderStudy();
+  studyState.idx++;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;
+  // 本轮复习完成（无后续错题）即清掉持久化会话，否则保存进度以便续练
+  if(studyState.idx>=studyState.queue.length && !(studyState.afterWrong&&studyState.afterWrong.length))clearReviewSession();
+  else saveReviewSession();
+  renderStudy();
 }
 /* 手势 / 键盘：切换上一张 / 下一张（不自动评分，纯浏览导航） */
 function studyNext(){if(studyState.idx+1<studyState.queue.length){studyState.idx++;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;renderStudy();}}
@@ -3883,7 +3955,7 @@ function toCard(qid){
   if(cur.deckId===d.id&&dv&&dv.classList&&dv.classList.contains('active'))renderDetail();
   toast('已转为记忆卡片，进入艾宾浩斯复习');
 }
-function nextQ(){quiz.idx++;quiz.sel=[];quiz.submitted=false;quiz.guess=false;renderQuiz();}
+function nextQ(){quiz.idx++;quiz.sel=[];quiz.submitted=false;quiz.guess=false;if(quiz.idx>=quiz.queue.length)clearReviewSession();renderQuiz();}
 function quizPrev(){if(quiz.idx>0){quiz.idx--;quiz.sel=[];quiz.submitted=false;quiz.guess=false;renderQuiz();}}
 function toggleGuess(){if(quiz.submitted)return;quiz.guess=!quiz.guess;renderQuiz();}
 
@@ -5159,8 +5231,8 @@ function applyViewportMode(){
   try{const _bs=loadBackups();autoBackup._last=_bs.length?dbSig(_bs[_bs.length-1].data):null;}catch(e){}
   autoBackup();                                   // 首次启动先留一份基线（无变化则自动跳过）
   setInterval(()=>autoBackup(),10*60*1000);
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden)autoBackup(); });
-  window.addEventListener('beforeunload',()=>{ try{autoBackup();}catch(e){} try{dumpOnExit();}catch(_){} });
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden){autoBackup();try{saveReviewSession();}catch(e){}} });
+  window.addEventListener('beforeunload',()=>{ try{autoBackup();}catch(e){} try{dumpOnExit();}catch(_){} try{saveReviewSession();}catch(e){} });
   wireGestures();                                 // 键盘导航（←→ / 空格）
   initTextTools();                                // 长按选中 / 标记 / 高亮
   refreshStoreStatus();                           // 探测本地存储是否可用，不可用则提示导出兜底
