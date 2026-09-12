@@ -590,6 +590,12 @@
   .search-deck{font-size:11px;color:var(--text-3);margin-top:4px}
   .search-empty,.search-more{padding:14px;text-align:center;font-size:13px;color:var(--text-3)}
   .search-more{border-top:1px solid var(--border);margin-top:4px;padding-top:10px}
+  /* 搜索结果操作按钮：单击卡片直接编辑 + 显式编辑/预览按钮 */
+  .search-item .search-act{display:flex;flex-direction:column;gap:6px;flex-shrink:0;justify-content:center}
+  .search-item .search-edit-btn,.search-item .search-view-btn{padding:5px 10px;font-size:12px;border-radius:9px;cursor:pointer;white-space:nowrap;border:1px solid var(--border);line-height:1.2;font-weight:600}
+  .search-item .search-edit-btn{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .search-item .search-view-btn{background:var(--bg);color:var(--text-2)}
+  .search-item .search-edit-btn:active,.search-item .search-view-btn:active{transform:translateY(1px)}
   mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   .preview-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-top:4px}
   .preview-box.answer{background:#ecfdf5;color:var(--green-dark);font-weight:700;border-color:#a7f3d0}
@@ -818,7 +824,7 @@
         <div class="card" id="plan-home"></div>
         <button class="btn btn-primary btn-block" id="btn-start-today" style="padding:15px;font-size:16px" onclick="startToday()">🎯 开始复习今日</button>
         <div class="stat-grid">
-          <div class="stat"><div class="n" id="hm-due">0</div><div class="l">📝 今日待复习卡片</div></div>
+          <div class="stat"><div class="n" id="hm-reviewed">0</div><div class="l">📝 今日已复习卡片</div></div>
           <div class="stat"><div class="n g" id="hm-quiz">0</div><div class="l">✅ 今日已刷题</div></div>
         </div>
         <div class="row between" style="margin:2px">
@@ -919,24 +925,75 @@ function testStorage(){
 }
 function storageAvailable(){
   if(_storageOK===null)_storageOK=testStorage();
-  return _storageOK;
+  if(_storageOK)return true;
+  if(_idbOK)return true;                    // localStorage 不可用但 IndexedDB 可用 → 仍可存储
+  if(!_idbFailed&&_idbPromise!==null)return true;  // IndexedDB 正在打开，即将可用（乐观判定，避免启动瞬间误判）
+  return false;
+}
+/* —— IndexedDB 弹性后备存储 ——
+   移动端 localStorage 常有 5MB 配额上限、隐私模式/跨域被禁、沙箱 iframe 访问抛错等问题，
+   导致「本地储存 / 备份 / 恢复」整段失效。这里把数据同时镜像到 IndexedDB（配额大得多、
+   移动端浏览器普遍可用），localStorage 不可用时由 IndexedDB 兜底，保证可存、可备份、可恢复。 */
+let _memStore={};            // IndexedDB 数据的同步视图：localStorage 不可用时作为主存储
+let _idbOK=false;            // IndexedDB 是否已成功打开
+let _idbFailed=false;        // IndexedDB 是否确认不可用（如浏览器不支持）
+let _idbPromise=null;
+function mcIDB(){
+  if(_idbPromise)return _idbPromise;
+  _idbPromise=new Promise((resolve,reject)=>{
+    if(!window.indexedDB){_idbFailed=true;reject(new Error('no indexedDB'));return;}
+    let r;try{r=window.indexedDB.open('mc_store',1);}catch(e){_idbFailed=true;reject(e);return;}
+    r.onupgradeneeded=()=>{try{r.result.createObjectStore('kv');}catch(_){}};
+    r.onsuccess=()=>{_idbOK=true;resolve(r.result);};
+    r.onerror=()=>{_idbFailed=true;reject(r.error||new Error('idb open error'));};
+  });
+  return _idbPromise;
+}
+function mcIDBSet(key,val){return mcIDB().then(db=>new Promise((res,rej)=>{
+  try{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(val,key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}catch(e){rej(e);}
+}));}
+function mcIDBGet(key){return mcIDB().then(db=>new Promise((res,rej)=>{
+  try{const tx=db.transaction('kv','readonly');const rq=tx.objectStore('kv').get(key);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);}catch(e){rej(e);}
+}));}
+function mcIDBDel(key){return mcIDB().then(db=>new Promise((res,rej)=>{
+  try{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete(key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}catch(e){rej(e);}
+}));}
+/* 启动后从 IndexedDB 把“主数据 / 备份”读回内存：当 localStorage 被禁用或已满时，
+   由 IndexedDB 恢复出最近一次数据并原样重渲染，避免“明明在手机浏览器却什么都没存” */
+function bootstrapStore(){
+  mcIDB().then(()=>Promise.all([mcIDBGet(LS_KEY),mcIDBGet(BACKUP_KEY)])).then(([main,bak])=>{
+    _idbOK=true;
+    if(bak!==undefined&&bak!==null)_memStore[BACKUP_KEY]=bak;
+    const lsUsable=(function(){try{return !!localStorage.getItem(LS_KEY);}catch(e){return false;}})();
+    if(!lsUsable&&main!==undefined&&main!==null){
+      try{
+        const d=JSON.parse(main);
+        const has=d&&((d.decks&&d.decks.length)||(d.folders&&d.folders.length)||(d.meta&&d.meta.plans&&d.meta.plans.length));
+        if(has){DB=d;_memStore[LS_KEY]=main;renderHome();}
+      }catch(e){}
+    }else if(lsUsable){try{_memStore[LS_KEY]=localStorage.getItem(LS_KEY);}catch(e){}}
+    refreshStoreStatus();
+  }).catch(()=>{_idbFailed=true;refreshStoreStatus();});
 }
 function rawGet(key){
-  if(storageAvailable()){ try{return localStorage.getItem(key);}catch(e){} }
+  if(storageAvailable()){ try{const v=localStorage.getItem(key);if(v!==null)return v;}catch(e){} }
+  if(Object.prototype.hasOwnProperty.call(_memStore,key))return _memStore[key];   // IndexedDB 同步视图兜底
   return null;
 }
 function rawSet(key,val){
+  let lsOK=false;
   if(storageAvailable()){
-    try{localStorage.setItem(key,val);return true;}
+    try{localStorage.setItem(key,val);lsOK=true;}
     catch(e){
-      if(/quota|quotaexceeded/i.test(e&&(e.name||e.message||'')||'')){_storageOK=false;_quotaHit=true;refreshStoreStatus();}
-      else{_storageOK=false;}
-      return false;
+      // 写不进 localStorage：可能是配额超限或当前环境禁用；交给 IndexedDB 后备，不再永久禁用存储
+      if(/quota|quotaexceeded/i.test(e&&(e.name||e.message||'')||''))_quotaHit=true;
     }
   }
-  return false;
+  _memStore[key]=val;                                              // 同步视图，localStorage 不可用时作为主存储
+  if(!_idbFailed)mcIDBSet(key,val).catch(()=>{});                  // 镜像到 IndexedDB（弹性后备）
+  return lsOK||_idbOK||(!_idbFailed&&_idbPromise!==null);          // 任一可用即视为保存成功
 }
-function rawRemove(key){ if(storageAvailable()){ try{localStorage.removeItem(key);}catch(e){} } }
+function rawRemove(key){ if(storageAvailable()){ try{localStorage.removeItem(key);}catch(e){} } delete _memStore[key]; if(!_idbFailed)mcIDBDel(key).catch(()=>{}); }
 /* 尝试从内嵌种子读取（用于「下载含数据 HTML」后重新打开的场景，localStorage 失效也能恢复） */
 function embeddedSeed(){
   try{const el=document.getElementById('embedded-db');if(el&&el.textContent&&el.textContent.trim())return JSON.parse(el.textContent);}catch(e){}
@@ -1018,7 +1075,7 @@ function storageBytes(){try{return (rawGet(LS_KEY)||'').length;}catch(e){return 
 const LS_QUOTA=5*1024*1024;   // 浏览器 localStorage 常见上限 ≈5MB
 
 /* =================== 自动备份 =================== */
-/* 每 10 分钟 + 切到后台 + 关闭页面时，把当前数据写入独立的备份键；
+/* 每 1 小时 + 切到后台 + 关闭页面时，把当前数据写入独立的备份键；
    页面崩溃 / 误删数据也能从历史快照一键恢复。仅在数据有变化时才存，避免无谓占用。 */
 const BACKUP_KEY='memoryCardDB_v1_backups';
 const BACKUP_MAX=30;                               // 循环保留最近 30 个快照
@@ -1058,7 +1115,7 @@ function openBackupCenter(){
   }).join('');
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">💾 备份与恢复</div>
-    <div class="plan-sec-note">本地每 <b>10 分钟</b>自动备份一次，切到后台 / 关闭页面时也会立即备份，最多保留最近 <b>${BACKUP_MAX}</b> 份快照。页面崩溃或误删数据时可从此处一键恢复。</div>
+    <div class="plan-sec-note">本地每 <b>1 小时</b>自动备份一次，切到后台 / 关闭页面时也会立即备份，最多保留最近 <b>${BACKUP_MAX}</b> 份快照。页面崩溃或误删数据时可从此处一键恢复。</div>
     <div class="row between" style="margin:10px 0">
       <span class="muted"><span class="store-status-dot ${storageAvailable()?'ok':'bad'}"></span>${storageAvailable()?'本地存储正常':'⚠️ 本地存储不可用，请用下方导出留底'}</span>
       <button class="btn btn-primary btn-sm" onclick="autoBackup({toast:true});openBackupCenter()">💾 立即备份</button></div>
@@ -1289,9 +1346,12 @@ const CMP_LEVELS={
 };
 function openStorage(){
   const st=scanImages();
+  const lsOK=testStorage();
+  const idbBacked=_idbOK&&!lsOK;            // localStorage 不可用，实际由 IndexedDB 持久化（配额充足）
   const total=storageBytes();
-  const pct=Math.min(100,Math.round(total/LS_QUOTA*100));
-  const lvl=pct>=85?'danger':pct>=60?'warn':'ok';
+  let pct=Math.min(100,Math.round(total/LS_QUOTA*100));
+  let lvl=pct>=85?'danger':pct>=60?'warn':'ok';
+  if(idbBacked){ pct=Math.min(100,Math.round(total/(50*1024*1024)*100)); lvl='ok'; }  // 以 50MB 估算，避免误报
   const imgPct=total?Math.round(st.bytes/total*100):0;
   const rows=st.decks.length
     ? st.decks.map(d=>`<div class="sg-row">
@@ -1308,8 +1368,9 @@ function openStorage(){
     <div class="modal-title">💾 存储管理</div>
     <div class="sg-bar ${lvl}"><div style="width:${pct}%"></div></div>
     <div class="row between" style="font-size:12px;color:var(--text-3);margin:6px 0 2px">
-      <span>已用 <b style="color:var(--text)">${fmtSize(total)}</b> / 约 5 MB</span><span>${pct}%</span></div>
-    ${lvl==='danger'?'<div class="sg-warn">⚠️ 空间快满了，再存图片可能保存失败。建议先「导出备份」，再压缩或清理图片。</div>'
+      <span>已用 <b style="color:var(--text)">${fmtSize(total)}</b> / ${idbBacked?'IndexedDB（配额充足）':'约 5 MB'}</span><span>${pct}%</span></div>
+    ${idbBacked?'<div class="sg-warn" style="background:#ecfdf5;border-color:#a7f3d0;color:#065f46">✅ 本地存储由 IndexedDB 持久化，配额充足，可正常保存 / 备份 / 恢复。</div>'
+      :lvl==='danger'?'<div class="sg-warn">⚠️ 空间快满了，再存图片可能保存失败。建议先「导出备份」，再压缩或清理图片。</div>'
       :lvl==='warn'?'<div class="sg-warn" style="background:#fffbeb;border-color:#fde68a;color:#92400e">空间用了一大半，建议压缩一次图片。</div>':''}
     <div class="muted" style="font-size:12px;margin:10px 0 4px">
       共 <b>${st.count}</b> 张图片，占用 <b>${fmtSize(st.bytes)}</b>（占总数据 ${imgPct}%）</div>
@@ -1391,8 +1452,9 @@ let _syncTimer=null;
 function scheduleSync(){const c=syncCfg();if(!c||!c.auto)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(()=>syncPush(true),800);}
 
 /* ---- CLOUD SYNC (GitHub) ---- */
-function syncCfg(){try{return JSON.parse(localStorage.getItem('syncCfg'))||null;}catch(e){return null;}}
-function setSyncCfg(c){localStorage.setItem('syncCfg',JSON.stringify(c));}
+const SYNC_CFG_KEY='memoryCardSyncCfg_v1';
+function syncCfg(){try{return JSON.parse(rawGet(SYNC_CFG_KEY)||'')||null;}catch(e){return null;}}
+function setSyncCfg(c){rawSet(SYNC_CFG_KEY,JSON.stringify(c));}
 function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
 function b64d(s){return decodeURIComponent(escape(atob(s)));}
 async function ghGet(owner,repo,path,token){
@@ -2017,11 +2079,30 @@ function go(view,record=true){
   if(view==='diagnosis')renderDiagnosis();
   window.scrollTo(0,viewScroll[view]||0);                // 渲染后恢复目标视图滚动位置
 }
-function goBack(){const v=navStack.pop();if(v)go(v,false);else go('home',false);}   // 返回进入时的上一页
+/* 软件内部「返回 / 退出」键：与手机系统返回键走同一条路径，保证一致 */
+function goBack(){
+  if(window.history&&history.length>1)history.back();          // 触发 popstate -> handleSystemBack
+  else{const v=navStack.pop();if(v)go(v,false);else go('home',false);}  // 不支持 history 时的兜底
+}
+/* 系统返回键（popstate）与内部返回键统一的处理：优先关弹窗，其次收搜索，最后原路返回上一界面 */
+function handleSystemBack(){
+  const m1=document.getElementById('modal');
+  if(m1&&m1.classList.contains('show')){hideModal();_keepBackBaseline();return;}
+  const m2=document.getElementById('modal2');
+  if(m2&&m2.classList.contains('show')){hideModal2();_keepBackBaseline();return;}
+  const sb=document.getElementById('search-results');
+  if(sb&&sb.style.display!=='none'){closeSearch();_keepBackBaseline();return;}
+  if(navStack.length){const v=navStack.pop();if(v)go(v,false);else go('home',false);_keepBackBaseline();return;}
+  /* 已无上一界面：不再拦截，交还系统（再次返回即退出应用） */
+}
+/* 拦截后补回一条基线记录，使后续系统返回键仍能被应用内逻辑接管 */
+function _keepBackBaseline(){try{history.pushState({spa:1},'');}catch(e){}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1600);}
 /* =================== 一键撤销 =================== */
 let _undo=null;          // 最近一次可撤销操作 {label, apply}
+let _undoTimer=null;     // 撤销浮条 3 秒自动消失定时器
+const UNDO_AUTO_HIDE=3000;
 function pushUndo(label,applyFn){
   _undo={label,apply:applyFn};
   renderUndoBar();
@@ -2040,7 +2121,13 @@ function renderUndoBar(){
       <button class="btn btn-primary btn-sm" onclick="undoLast()">↩ 撤销</button>
       <button class="btn btn-ghost btn-sm" onclick="dismissUndo()">✕</button>`;
     bar.classList.add('show');
-  }else{bar.classList.remove('show');bar.innerHTML='';}
+    /* 未点击则 4 秒后自动消除 */
+    clearTimeout(_undoTimer);
+    _undoTimer=setTimeout(()=>{dismissUndo();},UNDO_AUTO_HIDE);
+  }else{
+    bar.classList.remove('show');bar.innerHTML='';
+    clearTimeout(_undoTimer);_undoTimer=null;
+  }
 }
 /* 快照当前卡组某数组（cards/questions），撤销时整体还原，避免逐条还原出错 */
 function pushDeckUndo(id,label,key,before){
@@ -2061,7 +2148,7 @@ function dueCards(){
   return n;
 }
 function renderHome(){
-  document.getElementById('hm-due').textContent=dueCards();
+  document.getElementById('hm-reviewed').textContent=DB.meta.cardDays[todayKey()]||0;
   document.getElementById('hm-quiz').textContent=DB.meta.quizDays[todayKey()]||0;
   const bt=document.getElementById('btn-start-today');
   if(bt){
@@ -4810,13 +4897,20 @@ function globalSearch(raw){
   res.sort((a,b)=>b.score-a.score);
   const top=res.slice(0,30);
   if(!top.length){box.innerHTML=`<div class="search-empty">没有匹配「${esc(raw)}」的内容，换个关键词试试</div>`;box.style.display='block';return;}
-  box.innerHTML=top.map(r=>`<div class="search-item" onclick="jumpSearch('${r.kind}','${r.deckId}','${r.id}')">
+  box.innerHTML=top.map(r=>{
+    const isItem=(r.kind==='card'||r.kind==='question');
+    const act=isItem?`<div class="search-act">
+        <button class="search-edit-btn" onclick="event.stopPropagation();editSearch('${r.kind}','${r.deckId}','${r.id}')">✏️ 编辑</button>
+        <button class="search-view-btn" onclick="event.stopPropagation();jumpSearch('${r.kind}','${r.deckId}','${r.id}')">👁 预览</button>
+      </div>`:'';
+    return `<div class="search-item" onclick="${isItem?`editSearch('${r.kind}','${r.deckId}','${r.id}')`:`jumpSearch('${r.kind}','${r.deckId}','${r.id}')`}">
       <span class="search-kind ${r.kind}">${r.kind==='card'?'🃏 卡片':r.kind==='question'?'📝 题目':'📁 卡组'}</span>
       <div class="search-body">
         <div class="search-title">${hl(r.title,terms)}</div>
         <div class="search-snip">${hl(r.snippet,terms)}</div>
         <div class="search-deck">📁 ${esc(r.deck)}</div>
-      </div></div>`).join('')
+      </div>${act}</div>`;
+  }).join('')
     + (res.length>top.length?`<div class="search-more">仅显示前 ${top.length} 条 / 共 ${res.length} 条匹配，请缩小关键词</div>`:'');
   box.style.display='block';
 }
@@ -4835,6 +4929,13 @@ function jumpSearch(kind, deckId, id){
   if(kind==='deck'){openDeck(deckId);return;}
   if(kind==='card')openCardPreview(deckId,id);
   else openQuestionPreview(deckId,id);
+}
+/* 从搜索结果直接打开编辑弹窗（卡片/题目单击即编辑） */
+function editSearch(kind, deckId, id){
+  closeSearch();
+  if(kind==='card')openEditCard(deckId,id);
+  else if(kind==='question')openEditQuestion(deckId,id);
+  else openDeck(deckId);
 }
 /* 卡片预览（替代翻书：直接看知识点全貌） */
 function openCardPreview(deckId,id){
@@ -5368,17 +5469,29 @@ function applyViewportMode(){
   settleBuffer();                                 // 启动即结算历史配额缓冲（无记录/无计划则无影响）
   // 点击搜索框外部时收起结果面板
   document.addEventListener('click',e=>{ if(!e.target.closest||!e.target.closest('.search-wrap'))closeSearch(); });
+  /* 让手机系统自带返回键与软件内部「返回 / 退出」键一致：原路返回上一界面。
+     压入一条基线 history 记录，系统返回触发 popstate 时由 handleSystemBack 接管。 */
+  try{
+    if(window.history&&history.pushState){
+      history.pushState({spa:1},'');
+      window.addEventListener('popstate',handleSystemBack);
+    }
+  }catch(e){}
   // 恢复已锁定的文件句柄（file:// 场景，使自动写回跨刷新生效）
   try{restoreHandle();}catch(_){}
-  // 自动备份：每 10 分钟 + 切后台 + 关闭页面时各存一次
+  // 自动备份：每 1 小时 + 切后台 + 关闭页面时各存一次
   try{const _bs=loadBackups();autoBackup._last=_bs.length?dbSig(_bs[_bs.length-1].data):null;}catch(e){}
   autoBackup();                                   // 首次启动先留一份基线（无变化则自动跳过）
-  setInterval(()=>autoBackup(),10*60*1000);
+  setInterval(()=>autoBackup(),60*60*1000);
   document.addEventListener('visibilitychange',()=>{ if(document.hidden){autoBackup();try{saveReviewSession();}catch(e){}} });
   window.addEventListener('beforeunload',()=>{ try{autoBackup();}catch(e){} try{dumpOnExit();}catch(_){} try{saveReviewSession();}catch(e){} });
   wireGestures();                                 // 键盘导航（←→ / 空格）
   initTextTools();                                // 长按选中 / 标记 / 高亮
+  /* 先打开 IndexedDB 弹性后备（让 storageAvailable 尽快可用，避免启动瞬间误判“无法保存”） */
+  try{ mcIDB().catch(()=>{}); }catch(e){}
   refreshStoreStatus();                           // 探测本地存储是否可用，不可用则提示导出兜底
+  /* 从 IndexedDB 恢复数据（localStorage 被禁/已满时由它兜底） */
+  try{ bootstrapStore(); }catch(e){}
   applyViewportMode();                            // 视口模式：移动/PC + 横屏/竖屏
   let _vpT=null;
   const onVp=()=>{clearTimeout(_vpT);_vpT=setTimeout(applyViewportMode,120);};
