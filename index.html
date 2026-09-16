@@ -174,7 +174,7 @@
   .seg .opt{flex:1;border:2px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:.15s;font-weight:600}
   .seg .opt.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary-dark)}
   .seg .opt .em{font-size:26px;display:block;margin-bottom:4px}
-  textarea,input[type=text],input[type=date],select{font-family:inherit;font-size:14px;border:1px solid var(--border);
+  textarea,input[type=text],input[type=date],input[type=number],select{font-family:inherit;font-size:14px;line-height:1.4;border:1px solid var(--border);box-sizing:border-box;
         border-radius:var(--radius-s);padding:9px 11px;width:100%;background:#fff;color:var(--text)}
   textarea:focus,input:focus,select:focus{outline:none;border-color:var(--primary)}
   textarea{resize:vertical;min-height:120px}
@@ -570,6 +570,61 @@
   .muted.sm{font-size:12px;font-weight:500;text-transform:none;letter-spacing:0}
   .plan-sec-note{font-size:13px;color:var(--text-2);background:#fff7ed;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:10px;line-height:1.6}
   .plan-sec-note b{font-size:15px}
+  /* ===== 分数登记模块（备考专项计划） ===== */
+  .score-head{display:flex;align-items:center;gap:10px;margin:4px 2px 14px;flex-wrap:wrap}
+  .score-head h2{font-size:19px;margin:0;flex:1}
+  .score-head .back{font-size:13px}
+  .score-sec{margin-bottom:18px}
+  .score-sec .ph{font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;margin:4px 2px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .subj-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative}
+  .subj-card .sc-name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px}
+  .subj-card .sc-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .subj-card .sc-badge{font-size:11px;padding:2px 7px;border-radius:20px;background:#f1f5f9;color:var(--text-2)}
+  .subj-card .sc-badge.pass{background:#dcfce7;color:#166534}
+  .subj-card .sc-badge.target{background:#dbeafe;color:#1e40af}
+  .score-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:8px;margin:10px 0 4px}
+  .score-stats .st{background:#f8fafc;border-radius:9px;padding:8px 6px;text-align:center}
+  .score-stats .st .n{font-size:17px;font-weight:700;color:var(--text)}
+  .score-stats .st .l{font-size:11px;color:var(--text-3);margin-top:2px}
+  .score-chart{width:100%;overflow-x:auto;margin-top:6px}
+  .score-chart svg{display:block;max-width:100%}
+  .score-no-data{font-size:12px;color:var(--text-3);text-align:center;padding:14px 0}
+  .score-chart svg circle{cursor:pointer;transition:opacity .12s}
+  .score-chart svg circle:hover{opacity:.75}
+  .score-tip{position:fixed;transform:translate(-50%,-100%);background:#1e293b;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;pointer-events:none;z-index:99999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);animation:scoreTipIn .15s ease}
+  .score-tip::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
+  @keyframes scoreTipIn{from{opacity:0;transform:translate(-50%,-90%)}to{opacity:1;transform:translate(-50%,-100%)}}
+  .total-toggle{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;flex-wrap:wrap}
+  .total-toggle .sw{position:relative;width:42px;height:24px;border-radius:20px;background:#cbd5e1;cursor:pointer;transition:.15s;flex-shrink:0}
+  .total-toggle .sw.on{background:var(--primary)}
+  .total-toggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+  .total-toggle .sw.on::after{left:20px}
+  .test-list{display:flex;flex-direction:column;gap:6px}
+  .test-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px}
+  .test-row .t-date{color:var(--text-3);font-variant-numeric:tabular-nums;width:84px;flex-shrink:0}
+  .test-row .t-subj{font-weight:600;flex-shrink:0}
+  .test-row .t-paper{background:#eef2ff;color:#4338ca;border:1px solid #e0e7ff;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;flex-shrink:0;white-space:nowrap}
+  .test-row .t-score{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+  .test-row .t-note{color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  .score-empty{text-align:center;color:var(--text-3);font-size:14px;padding:24px 0}
+  /* 总分趋势标题与开关同一行；更紧凑的开关 */
+  .score-total-head{margin-bottom:12px}
+  .score-total-head .btn{text-transform:none;letter-spacing:0}
+  .score-total-ctrls{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .sw.sm{position:relative;width:34px;height:20px;border-radius:20px;background:#cbd5e1;cursor:pointer;transition:.15s;flex-shrink:0}
+  .sw.sm::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .sw.sm.on{background:var(--primary)}
+  .sw.sm.on::after{left:16px}
+  /* 科目卡：单击进入详情 */
+  .subj-card.clickable{cursor:pointer;transition:box-shadow .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+  .subj-card.clickable:active{background:var(--card);box-shadow:0 2px 10px rgba(15,23,42,.08);border-color:var(--primary)}
+  .subj-card.clickable:hover{box-shadow:0 2px 10px rgba(15,23,42,.08);border-color:var(--primary)}
+  .subj-card .sc-more{margin-top:10px;font-size:12px;color:var(--primary);font-weight:600;text-align:right}
+  /* 详情页：测试记录可点开修改 */
+  .test-row.link{cursor:pointer;transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent}
+  .test-row.link:active{background:var(--card)}
+  .test-row.link:hover{border-color:var(--primary);background:#fafbff}
   /* ===== 全局搜索 ===== */
   .searchbar{padding:8px 14px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
   .search-wrap{position:relative;max-width:720px;margin:0 auto}
@@ -686,7 +741,7 @@
     .cd-card{padding:11px 12px;gap:10px}
     .folder-hd{padding:9px 11px}
     .tabs2.t4 .t{font-size:11px}
-    textarea,input[type=text],input[type=date],select{padding:11px 12px;font-size:16px}
+    textarea,input[type=text],input[type=date],input[type=number],select{padding:11px 12px;font-size:16px}
   }
   /* 更小屏：进一步压缩，保证一屏能多看几张卡 */
   @media (max-width:400px){
@@ -881,6 +936,10 @@
 
     <!-- ============ DIAGNOSIS ============ -->
     <div class="view" id="view-diagnosis"></div>
+
+    <!-- ============ SCORE（分数登记） ============ -->
+    <div class="view" id="view-score"></div>
+    <div class="view" id="view-score-subject"></div>
   </div>
 </div>
 
@@ -1606,7 +1665,7 @@ function openQuizMenu(){
 /* 卡片背诵页头部：设置 / 记问题 / 默写方式 / 范围 / 顺序 —— 与刷题页「更多」结构一致 */
 function openStudyMenu(){
   const dispMap={flip:'翻面',occlude:'遮挡',self:'自检',split:'对照'};
-  const scopeMap={all:'全部',unstudied:'未背',easy:'简单',hard:'困难',forgot:'忘记'};
+  const scopeMap={all:'全部',unstudied:'未背',due:'复习',easy:'简单',hard:'困难',forgot:'忘记'};
   const items=[
     {icon:'⚙',label:'背诵设置',sub:studyState.global?'退出后重进可改范围':'范围 / 标签 / 顺序 / 默写方式',onclick:"openStudyConfigFromStudy()"},
     {icon:'📝',label:'记问题',sub:'记录背诵中的疑问',onclick:"quickMemoFromStudy()"},
@@ -1614,7 +1673,7 @@ function openStudyMenu(){
     {icon:'✍️',label:'默写方式：'+dispMap[studyState.display],sub:'翻面 / 遮挡 / 自检',onclick:"openStudyDispMenu()"},
   ];
   if(!studyState.global){
-    items.push({icon:'🗂',label:'范围：'+scopeMap[studyState.scope],sub:'全部 / 未背 / 简单 / 困难 / 忘记',onclick:"openStudyScopeMenu()"});
+    items.push({icon:'🗂',label:'范围：'+scopeMap[studyState.scope],sub:'全部 / 未背 / 复习 / 简单 / 困难 / 忘记',onclick:"openStudyScopeMenu()"});
     items.push({icon:'🔀',label:'顺序：'+(studyState.order==='shuffle'?'乱序':'顺序'),onclick:"openStudyOrderMenu()"});
   }
   openSheet('更多操作',items);
@@ -1652,10 +1711,11 @@ function toggleReadSplit(btn){
 }
 function openStudyScopeMenu(){
   const d=getDeck(studyState.deckId)||{cards:[]};const cs=d.cards||[];
-  const n=cs.length,un=cs.filter(x=>(x.reviews||0)===0).length,ez=cs.filter(x=>x.easy).length,hd=cs.filter(x=>x.hard).length,fg=cs.filter(x=>x.forgot).length;
+  const n=cs.length,un=cs.filter(x=>(x.reviews||0)===0).length,ez=cs.filter(x=>x.easy).length,hd=cs.filter(x=>x.hard).length,fg=cs.filter(x=>x.forgot).length,due=dueInDeck(d);
   openSheet('背诵范围',[
     {icon:'📚',label:'全部 ('+n+')',sub:studyState.scope==='all'?'当前':'',onclick:"restartStudyScope('all')"},
     {icon:'🆕',label:'未背 ('+un+')',sub:studyState.scope==='unstudied'?'当前':'',onclick:"restartStudyScope('unstudied')"},
+    {icon:'🔁',label:'复习 ('+due+')',sub:studyState.scope==='due'?'当前':'',onclick:"restartStudyScope('due')"},
     {icon:'🟢',label:'简单 ('+ez+')',sub:studyState.scope==='easy'?'当前':'',onclick:"restartStudyScope('easy')"},
     {icon:'🟡',label:'困难 ('+hd+')',sub:studyState.scope==='hard'?'当前':'',onclick:"restartStudyScope('hard')"},
     {icon:'🔴',label:'忘记 ('+fg+')',sub:studyState.scope==='forgot'?'当前':'',onclick:"restartStudyScope('forgot')"},
@@ -2077,6 +2137,8 @@ function go(view,record=true){
   if(view==='detail')renderDetail();
   if(view==='plan')renderPlan();
   if(view==='diagnosis')renderDiagnosis();
+  if(view==='score')renderScorePlan();
+  if(view==='score-subject')renderScoreSubject();
   window.scrollTo(0,viewScroll[view]||0);                // 渲染后恢复目标视图滚动位置
 }
 /* 软件内部「返回 / 退出」键：与手机系统返回键走同一条路径，保证一致 */
@@ -2643,8 +2705,13 @@ function confirmImport(){
   if(importState.targetId){
     const deck=getDeck(importState.targetId);
     if(!deck){toast('目标卡组不存在');return;}
-    if(p.mode==='quiz'){deck.questions=(deck.questions||[]).concat(p.items.filter(q=>q.question));}
-    else{deck.cards=(deck.cards||[]).concat(p.items.filter(c=>c.front));}
+    if(p.mode==='quiz'){
+      const added=p.items.filter(q=>q.question && !questionExistsInDeck(deck,q.question,q.options,q.answer));
+      deck.questions=added.concat(deck.questions||[]);   // 去重后置于最前
+    }else{
+      const added=p.items.filter(c=>c.front && !cardExistsInDeck(deck,c.front,c.back));
+      deck.cards=added.concat(deck.cards||[]);
+    }
     save();
     importState={mode:'cards',fileName:'',text:'',parsed:null,targetId:null};
     toast('已导入到卡组：'+deck.name);
@@ -2653,8 +2720,12 @@ function confirmImport(){
   }
   const name=prompt('给卡组起个名字：',importState.fileName.replace(/\.[^.]+$/,'')||'我的卡组');
   if(name===null)return;
+  // 新建卡组：先去除粘贴文本内的重复项（同组自动去重）
+  let cards=[],questions=[];
+  if(p.mode==='cards'){const seen=new Set();cards=p.items.filter(c=>c.front).filter(c=>{const k=cardDupKey(c.front,c.back);if(seen.has(k))return false;seen.add(k);return true;});}
+  else{const seen=new Set();questions=p.items.filter(q=>{const k=questionDupKey(q.question,q.options,q.answer);if(seen.has(k))return false;seen.add(k);return true;});}
   const deck={id:uid(),name:name||'未命名卡组',source:importState.fileName||'粘贴文本',createdAt:now(),
-    cards:p.mode==='cards'?p.items.filter(c=>c.front):[],questions:p.mode==='quiz'?p.items:[],quiz:{total:0,correct:0,byType:{}},flipped:false};
+    cards,questions,quiz:{total:0,correct:0,byType:{}},flipped:false};
   DB.decks.push(deck);save();
   importState={mode:'cards',fileName:'',text:'',parsed:null,targetId:null};
   toast('卡组已生成：'+deck.name);
@@ -3293,8 +3364,9 @@ function saveNewCard(id,again){
   const d=getDeck(id);if(!d)return;
   const front=document.getElementById('ncf').innerHTML;const back=document.getElementById('ncb').innerHTML;
   if(!hasContent(front)&&!hasContent(back)){toast('正反面不能都为空');return;}
+  if(cardExistsInDeck(d,front,back)){toast('该卡组已存在相同卡片，已自动去重跳过');if(again)openNewCard(id);return;}
   const card=mkCard(front,back);card.ext=document.getElementById('nce').innerHTML;card.note=(document.getElementById('ncnote').value||'').trim();card.links=collectLinks();
-  d.cards=d.cards||[];d.cards.push(card);save();
+  d.cards=d.cards||[];d.cards.unshift(card);save();          // 新卡片置于最前
   if(again){openNewCard(id);toast('已添加，继续录入');}
   else{hideModal();toast('已添加 1 张卡片');}
   renderDetail();renderDetailSub('cards');
@@ -3397,9 +3469,10 @@ function saveNewQuestion(id,again){
   }
   if(!question){toast('题干不能为空');return;}
   if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
+  if(questionExistsInDeck(d,question,optLines,answer)){toast('该卡组已存在相同题目，已自动去重跳过');if(again)openNewQuestion(id);return;}
   const q={id:uid(),type,question,options:type==='judge'?['正确','错误']:optLines,answer,analysis,
     done:false,inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0,fav:false};
-  d.questions=d.questions||[];d.questions.push(q);save();
+  d.questions=d.questions||[];d.questions.unshift(q);save();    // 新题目置于最前
   if(again){openNewQuestion(id);toast('已添加，继续录入');}
   else{hideModal();toast('已添加 1 道题目');}
   cur.sub='questions';renderDetail();
@@ -3436,6 +3509,7 @@ function dueCardQueue(deck){
 function startStudy(id,cfg){
   cfg=cfg||{scope:'all',tags:null,order:'shuffle',display:'flip'};
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
+  saveDeckStudyCfg(id,cfg);                       // 记忆本次背诵设置，下次直接开始即用
   const q=buildStudyQueue(d,cfg);
   if(!q.length){
     const total=(d.cards||[]).length, empties=(d.cards||[]).filter(isCardEmpty).length;
@@ -3486,7 +3560,8 @@ function studyEmptyMsg(cfg){
 function openStudyConfig(id){
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
   window.__bt=null;window.__ct=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
-  window.__sc={id,scope:'all',tags:[],order:'shuffle',display:'flip'};
+  const cfg=deckStudyCfg(d);                    // 预填上次记忆的背诵设置，省去重复设置
+  window.__sc={id,scope:cfg.scope,tags:cfg.tags,order:cfg.order,display:cfg.display};
   renderStudyConfig();showModal();
 }
 function scSet(k,v){window.__sc[k]=v;renderStudyConfig();}
@@ -3501,6 +3576,7 @@ function renderStudyConfig(){
   const ez= d? d.cards.filter(x=>x.easy).length:0;
   const hd= d? d.cards.filter(x=>x.hard).length:0;
   const fg= d? d.cards.filter(x=>x.forgot).length:0;
+  const due= d? dueInDeck(d):0;
   const scopeChip=(val,label,num)=>`<div class="q ${c.scope===val?'active':''}" onclick="scSet('scope','${val}')">${label} <span class="muted">${num}</span></div>`;
   const ordChip=(v,l)=>`<div class="q ${c.order===v?'active':''}" onclick="scSet('order','${v}')">${l}</div>`;
   const dpChip=(v,l)=>`<div class="q ${c.display===v?'active':''}" onclick="scSet('display','${v}')">${l}</div>`;
@@ -3508,7 +3584,8 @@ function renderStudyConfig(){
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">🃏 卡片背诵设置</div>
     <div class="pv-field"><label>范围</label>
-      <div class="queue-seg">${scopeChip('all','全部',n)}${scopeChip('unstudied','未背',un)}${scopeChip('easy','简单',ez)}${scopeChip('hard','困难',hd)}${scopeChip('forgot','忘记',fg)}</div></div>
+      <div class="queue-seg">${scopeChip('all','全部',n)}${scopeChip('unstudied','未背',un)}${scopeChip('due','复习',due)}${scopeChip('easy','简单',ez)}${scopeChip('hard','困难',hd)}${scopeChip('forgot','忘记',fg)}</div>
+    </div>
     <div class="pv-field"><label>标签（可多选 / 可不选）</label>
       <div class="cfg-types">${chips||'<span class="muted">暂无可选标签</span>'}</div>
       <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-top:6px">🏷 管理标签</button></div>
@@ -3523,7 +3600,40 @@ function renderStudyConfig(){
 }
 function scStart(){
   const c=window.__sc;hideModal();
+  saveDeckStudyCfg(c.id,{scope:c.scope,tags:c.tags,order:c.order,display:c.display}); // 记忆本次设置
   startStudy(c.id,{scope:c.scope,tags:c.tags&&c.tags.length?c.tags:null,order:c.order,display:c.display});
+}
+/* ============ 同组去重 + 每卡组背诵设置记忆 ============ */
+// 归一化文本用于比较（去 HTML 标签 + 折叠空白 + 小写）
+function _normText(t){return stripHtml(t||'').replace(/\s+/g,' ').trim().toLowerCase();}
+function cardDupKey(front,back){return _normText(front)+' || '+_normText(back);}
+function questionDupKey(question,options,answer){
+  return _normText(question)+' || '+_normText((options||[]).join(' | '))+' || '+_normText(answer);
+}
+// 同一卡组内是否已存在相同卡片 / 题目（excludeId 用于编辑时跳过自身）
+function cardExistsInDeck(d,front,back,excludeId){
+  const k=cardDupKey(front,back);
+  return (d.cards||[]).some(c=>c.id!==excludeId && cardDupKey(c.front,c.back)===k);
+}
+function questionExistsInDeck(d,question,options,answer,excludeId){
+  const k=questionDupKey(question,options,answer);
+  return (d.questions||[]).some(q=>q.id!==excludeId && questionDupKey(q.question,q.options,q.answer)===k);
+}
+// 某卡组「今日待复习」卡片数（nextReview<=now 且非空）
+function dueInDeck(d){
+  const t=now();
+  return (d.cards||[]).filter(c=>(c.nextReview||0)<=t && !isCardEmpty(c)).length;
+}
+// 读取卡组上次记忆的背诵设置（没有则回退默认）
+function deckStudyCfg(d){
+  const c=d&&d.studyCfg;
+  return {scope:(c&&c.scope)||'all',tags:(c&&c.tags)||[],order:(c&&c.order)||'shuffle',display:(c&&c.display)||'flip'};
+}
+// 保存卡组背诵设置记忆
+function saveDeckStudyCfg(id,cfg){
+  const d=getDeck(id);if(!d)return;
+  d.studyCfg={scope:cfg.scope||'all',tags:(cfg.tags&&cfg.tags.length)?cfg.tags:null,order:cfg.order||'shuffle',display:cfg.display||'flip'};
+  save();
 }
 function buildStudyQueue(d,cfg){
   const scope=cfg.scope||'all';
@@ -3533,6 +3643,7 @@ function buildStudyQueue(d,cfg){
   else if(scope==='easy')cs=d.cards.filter(c=>c.easy);                  // 简单
   else if(scope==='hard')cs=d.cards.filter(c=>c.hard);                 // 困难
   else if(scope==='forgot')cs=d.cards.filter(c=>c.forgot);             // 忘记
+  else if(scope==='due')cs=d.cards.filter(c=>(c.nextReview||0)<=now()); // 今日待复习（含未背）
   else cs=d.cards.slice();
   if(cfg.tags&&cfg.tags.length)cs=cs.filter(c=>(c.tags||[]).some(t=>cfg.tags.includes(t)));
   cs=cs.filter(c=>!isCardEmpty(c));                  // 自动隐藏空白卡，不占复习队列
@@ -4174,8 +4285,8 @@ function qToCard(d,q){
   const ans=q.type==='judge'?q.answer:q.type==='multiple'?q.answer.split('').join('、'):q.answer;
   const back=`答案：${ans}\n解析：${q.analysis||'（无）'}`;
   d.cards=d.cards||[];
-  if(d.cards.some(c=>stripHtml(c.front)===stripHtml(q.question)))return false;
-  d.cards.push(mkCard(q.question,back));return true;
+  if(cardExistsInDeck(d,q.question,back))return false;     // 已转过则不去重重复转
+  d.cards.unshift(mkCard(q.question,back));return true;    // 置于最前
 }
 function toCard(qid){
   const d=findDeckOfQuestion(qid);const q=d&&d.questions.find(x=>x.id===qid);if(!q)return;
@@ -4315,7 +4426,8 @@ function planListHtml(){
       <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
       <div class="cd-num">${num}<small>天</small></div>
       <div class="cd-info"><div class="cd-name">${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · ${planGoalLabel(p)}</div></div>
-      <div class="cd-acts"><button class="btn btn-ghost btn-xs" onclick="openPlanModal('${p.id}')">✏️</button>
+      <div class="cd-acts"><button class="btn btn-ghost btn-xs" onclick="goToScore('${p.id}')" title="分数登记与可视化">📊</button>
+        <button class="btn btn-ghost btn-xs" onclick="openPlanModal('${p.id}')">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="delPlan('${p.id}')">🗑</button></div></div>`;
   }).join('')+`</div>`;
 }
@@ -4410,6 +4522,351 @@ function savePlan(){
   save();hideModal();settleBuffer();renderPlan();renderHome();toast('已保存');
 }
 function delPlan(id){DB.meta.plans=(DB.meta.plans||[]).filter(x=>x.id!==id);save();hideModal();settleBuffer();renderPlan();renderHome();toast('已删除');}
+/* ============================================================
+   分数登记模块（备考专项计划）：自定义科目 + 每次测试登记（科目/日期/分数）
+   + 每科平均分/目标/及格/次数/趋势图 + 可选「总分趋势」（按考卷序号汇总各科目）
+   数据挂在 plan 上：p.subjects=[{id,name,pass,target,full}]，p.tests=[{id,subjectId,date,score,note,paper}]
+   ============================================================ */
+function scorePlan(id){return (DB.meta.plans||[]).find(p=>String(p.id)===String(id));}
+function planSubjects(p){return (p&&p.subjects)||[];}
+function planTests(p){return (p&&p.tests)||[];}
+function subjTests(p,sid){return planTests(p).filter(t=>String(t.subjectId)===String(sid)).slice().sort((a,b)=>a.date<b.date?-1:1);}
+function subjStat(p,sid){
+  const ts=subjTests(p,sid).map(t=>+t.score).filter(v=>!isNaN(v));
+  if(!ts.length)return {count:0,avg:null,max:null,min:null};
+  const sum=ts.reduce((a,b)=>a+b,0);
+  return {count:ts.length,avg:sum/ts.length,max:Math.max(...ts),min:Math.min(...ts)};
+}
+/* 总分趋势：按考卷序号（如「2024年1卷」）汇总同卷各科目测试分（同理「同卷三门科目相加」） */
+function totalByPaper(p){
+  const map={};
+  planTests(p).forEach(t=>{
+    const key=t.paper&&t.paper.trim(); if(!key)return;            // 未填考卷序号的记录不计入总分趋势
+    if(!map[key])map[key]={paper:key,total:0,_min:null};
+    map[key].total+=(+t.score||0);
+    if(t.date&&(map[key]._min===null||t.date<map[key]._min))map[key]._min=t.date;
+  });
+  return Object.keys(map).map(k=>{const o=map[k];const r={paper:o.paper,total:Math.round(o.total*100)/100};if(o._min)r._min=o._min;return r;})
+    .sort((a,b)=>(a._min&&b._min)?(a._min<b._min?-1:1):(a.paper<b.paper?-1:1));
+}
+/* 把数值向上取到「整齐」的上限（用于折线图纵轴） */
+function niceMaxArr(vals){
+  const max=Math.max(0,...(vals||[0]));
+  const NICE=[10,20,25,30,40,50,60,80,100,120,150,200,250,300,400,500,600,800,1000,1500,2000,3000,5000];
+  for(const x of NICE)if(x>=max)return x;
+  return Math.ceil(max/1000)*1000+1000;
+}
+/* 点击数据点浮现分数注释，3秒自动消失 */
+let _scoreTipTimer=null;
+function showScoreTip(el){
+  const old=document.getElementById('score-tip');
+  if(old)old.remove();
+  if(_scoreTipTimer){clearTimeout(_scoreTipTimer);_scoreTipTimer=null;}
+  const text=el.getAttribute('data-tip');
+  if(!text)return;
+  const rect=el.getBoundingClientRect();
+  const tip=document.createElement('div');
+  tip.id='score-tip';tip.className='score-tip';tip.textContent=text;
+  tip.style.left=(rect.left+rect.width/2)+'px';
+  tip.style.top=(rect.top-6)+'px';
+  document.body.appendChild(tip);
+  _scoreTipTimer=setTimeout(()=>{const t=document.getElementById('score-tip');if(t)t.remove();_scoreTipTimer=null;},3000);
+}
+/* 极简 SVG 折线趋势图：pts=[{y,label}], refs=[{y,color,label}] 参考线 */
+function scoreLineChart(o){
+  const w=o.w||320,h=o.h||160,pl=34,pr=12,pt=12,pb=26;
+  const iw=w-pl-pr, ih=h-pt-pb;
+  const vals=(o.vals||[]).filter(v=>v&&!isNaN(+v.y));
+  if(!vals.length)return `<div class="score-no-data">暂无记录，先登记几次测试</div>`;
+  const yVals=vals.map(v=>+v.y).concat((o.refs||[]).map(r=>+r.y));
+  const yMax=o.yMax!=null?o.yMax:niceMaxArr(yVals);
+  const yMin=o.yMin!=null?o.yMin:0;
+  const n=vals.length;
+  const X=i=> n<=1? pl+iw/2 : pl+iw*i/(n-1);
+  const Y=v=> pt+ih*(1-(v-yMin)/((yMax-yMin)||1));
+  const showLabel=i=> n<=8 || i===0 || i===Math.floor((n-1)/2) || i===n-1;
+  let g='';
+  const lines=4;
+  for(let i=0;i<=lines;i++){
+    const v=yMin+(yMax-yMin)*i/lines, yy=Y(v);
+    g+=`<line x1="${pl}" y1="${yy.toFixed(1)}" x2="${w-pr}" y2="${yy.toFixed(1)}" stroke="#eef2f7"/>`;
+    g+=`<text x="${pl-5}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#94a3b8">${Math.round(v)}</text>`;
+  }
+  let refs='';
+  (o.refs||[]).forEach(r=>{ if(+r.y<=yMax&&+r.y>=yMin){const yy=Y(+r.y);
+    refs+=`<line x1="${pl}" y1="${yy.toFixed(1)}" x2="${w-pr}" y2="${yy.toFixed(1)}" stroke="${r.color}" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    refs+=`<text x="${w-pr}" y="${(yy-3).toFixed(1)}" text-anchor="end" font-size="9" fill="${r.color}">${r.label}</text>`;} });
+  /* 从参考线提取及格分/目标分，用于点染色 */
+  let passY=null,targetY=null;
+  (o.refs||[]).forEach(r=>{
+    if(r.label&&String(r.label).indexOf('及格')===0)passY=+r.y;
+    if(r.label&&String(r.label).indexOf('目标')===0)targetY=+r.y;
+  });
+  const baseColor=o.color||'#6366f1';
+  const ptsStr=vals.map((v,i)=>`${X(i).toFixed(1)},${Y(+v.y).toFixed(1)}`).join(' ');
+  let dots='';
+  vals.forEach((v,i)=>{
+    const val=+v.y;
+    const dotColor=(passY!=null&&val<passY)?'#ef4444':(targetY!=null&&val>=targetY)?'#22c55e':baseColor;
+    const tip=String(val)+'分'+(v.label?' · '+v.label:'');
+    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(val).toFixed(1)}" r="4" fill="${dotColor}" stroke="#fff" stroke-width="1.5" data-tip="${esc(tip)}" onclick="showScoreTip(this)" style="cursor:pointer"/>`;
+    if(v.label&&showLabel(i))dots+=`<text x="${X(i).toFixed(1)}" y="${h-7}" text-anchor="middle" font-size="9" fill="#64748b">${esc(v.label)}</text>`; });
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${g}${refs}
+    <polyline points="${ptsStr}" fill="none" stroke="${o.color||'#6366f1'}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+}
+/* —— 分数页主渲染 —— */
+function goToScore(planId){ window.__scorePlanId=String(planId); go('score'); }
+function renderScorePlan(){
+  const v=document.getElementById('view-score'); if(!v)return;
+  const p=scorePlan(window.__scorePlanId);
+  if(!p){ go('plan'); return; }
+  const subjects=planSubjects(p), tests=planTests(p);
+  const planDays=p.date?daysUntil(p.date):null;
+  let html=`<div class="score-sec"><div class="score-head">
+      <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
+      <h2>${esc(p.name)} 分数登记</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSubjectModal()">＋ 科目</button>
+      <button class="btn btn-outline btn-sm" onclick="openTestModal()" ${subjects.length?'':'disabled style="opacity:.5"'} title="${subjects.length?'登记一次测试':'请先添加科目'}">＋ 登记</button>
+    </div>`;
+  if(p.date)html+=`<div class="muted" style="font-size:12px;margin:-6px 2px 12px">📅 距考试 ${planDays<0?'已结束':planDays+' 天'}（${esc(p.date)}）· 共 <b>${subjects.length}</b> 门科目，<b>${tests.length}</b> 条测试记录</div>`;
+  html+=`</div>`;
+  if(!subjects.length){
+    html+=`<div class="score-sec"><div class="score-empty">还没有科目。点「＋ 科目」添加，例如初会：实务 / 经济法；考研：数学 / 英语 / 专业课。</div></div>`;
+  }else{
+    html+=subjects.map(s=>scoreSubjectHtml(p,s)).join('');
+  }
+  html+=scoreTotalHtml(p);
+  html+=scoreTestListHtml(p);
+  v.innerHTML=html;
+}
+/* —— 单科分数记录详情页（单击科目进入，记录可点开修改） —— */
+function goToScoreSubject(planId,subjectId){ window.__scorePlanId=String(planId); window.__scoreSubjectId=String(subjectId); go('score-subject'); }
+function renderScoreSubject(){
+  const v=document.getElementById('view-score-subject'); if(!v)return;
+  const p=scorePlan(window.__scorePlanId);
+  if(!p){ go('plan'); return; }
+  const s=planSubjects(p).find(x=>String(x.id)===String(window.__scoreSubjectId));
+  if(!s){ go('score', false); return; }   // 科目不存在（如历史数据 id 类型不一致）时回到分数登记总览，避免白屏
+  const ts=subjTests(p,s.id), st=subjStat(p,s.id);
+  let html=`<div class="score-sec"><div class="score-head">
+      <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
+      <h2>${esc(s.name)} 分数记录</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSubjectModal('${s.id}')">✏️ 科目</button>
+      <button class="btn btn-outline btn-sm" onclick="openTestModal(null,'${s.id}')">＋ 登记</button>
+    </div>`;
+  html+=`<div class="score-stats">
+      <div class="st"><div class="n">${st.count}</div><div class="l">测试次数</div></div>
+      <div class="st"><div class="n">${st.avg==null?'—':Math.round(st.avg*10)/10}</div><div class="l">平均分</div></div>
+      <div class="st"><div class="n">${st.max==null?'—':st.max}</div><div class="l">最高</div></div>
+      <div class="st"><div class="n">${st.min==null?'—':st.min}</div><div class="l">最低</div></div>
+    </div>`;
+  if(!ts.length){
+    html+=`<div class="score-empty">还没有「${esc(s.name)}」的测试记录。点「＋ 登记」添加一次测试。</div>`;
+  }else{
+    html+=`<div style="margin-top:14px"><div class="ph">🧾 测试记录（${ts.length} 条，点任一条可修改）</div>
+      <div class="test-list">${ts.slice().reverse().map(t=>{
+        return `<div class="test-row link" onclick="openTestModal('${t.id}')">
+          <span class="t-date">${esc(t.date||'')}</span>
+          ${t.paper?`<span class="t-paper">${esc(t.paper)}</span>`:'<span class="t-paper"></span>'}
+          <span class="t-score">${esc(t.score)}</span>
+          ${t.note?`<span class="t-note">${esc(t.note)}</span>`:'<span class="t-note"></span>'}
+        </div>`;
+      }).join('')}</div></div>`;
+  }
+  html+=`</div>`;
+  v.innerHTML=html;
+}
+function scoreSubjectHtml(p,s){
+  const st=subjStat(p,s.id), ts=subjTests(p,s.id);
+  const chart=scoreLineChart({
+    vals:ts.map(t=>({y:+t.score,label:t.date?t.date.slice(5):''})),
+    color:p.color||'#6366f1',
+    refs:[
+      (s.pass!=null&&s.pass!=='')?{y:+s.pass,color:'#16a34a',label:'及格'+s.pass}:null,
+      (s.target!=null&&s.target!=='')?{y:+s.target,color:'#2563eb',label:'目标'+s.target}:null
+    ].filter(Boolean)
+  });
+  return `<div class="score-sec"><div class="subj-card clickable" onclick="goToScoreSubject('${p.id}','${s.id}')">
+      <div class="sc-name">📘 ${esc(s.name)}</div>
+      <div class="sc-badges">
+        ${(s.pass!=null&&s.pass!=='')?`<span class="sc-badge pass">及格 ${s.pass}</span>`:''}
+        ${(s.target!=null&&s.target!=='')?`<span class="sc-badge target">目标 ${s.target}</span>`:''}
+        ${(s.full!=null&&s.full!=='')?`<span class="sc-badge">满分 ${s.full}</span>`:''}
+      </div>
+      <div class="score-stats">
+        <div class="st"><div class="n">${st.count}</div><div class="l">测试次数</div></div>
+        <div class="st"><div class="n">${st.avg==null?'—':Math.round(st.avg*10)/10}</div><div class="l">平均分</div></div>
+        <div class="st"><div class="n">${st.max==null?'—':st.max}</div><div class="l">最高</div></div>
+        <div class="st"><div class="n">${st.min==null?'—':st.min}</div><div class="l">最低</div></div>
+      </div>
+      <div class="score-chart">${chart}</div>
+      <div class="sc-more">查看该科目全部记录 →</div>
+    </div></div>`;
+}
+function scoreTotalHtml(p){
+  if(!p.combineTotal){
+    return `<div class="score-sec"><div class="ph score-total-head">📈 总分趋势
+      <div class="sw sm" onclick="toggleCombineTotal()" title="开启总分趋势"></div></div></div>`;
+  }
+  const data=totalByPaper(p);
+  const chart=scoreLineChart({
+    w:340,h:170,
+    vals:data.map(d=>({y:d.total,label:d.paper})),
+    color:'#f59e0b',
+    refs:[
+      (p.totalPass!=null&&p.totalPass!=='')?{y:+p.totalPass,color:'#16a34a',label:'及格'+p.totalPass}:null,
+      (p.totalTarget!=null&&p.totalTarget!=='')?{y:+p.totalTarget,color:'#2563eb',label:'目标'+p.totalTarget}:null
+    ].filter(Boolean)
+  });
+  const avg=data.length?Math.round(data.reduce((a,b)=>a+b.total,0)/data.length*10)/10:null;
+  const hasPaper=planTests(p).some(t=>t.paper&&t.paper.trim());
+  return `<div class="score-sec"><div class="ph score-total-head">📈 总分趋势
+      <div class="score-total-ctrls">
+        <button class="btn btn-ghost btn-sm" onclick="editTotalTarget()">⚙ 目标/及格</button>
+        <div class="sw sm on" onclick="toggleCombineTotal()" title="关闭总分趋势"></div>
+      </div></div>
+    ${!hasPaper?'<div class="sg-warn" style="margin-bottom:10px">还没记录任何「考卷序号」。在登记时填写如「2024年1卷」，开启本开关后会自动把同卷各科分数汇总成总分趋势。</div>':''}
+    <div class="score-stats">
+      <div class="st"><div class="n">${data.length}</div><div class="l">已汇总卷次</div></div>
+      <div class="st"><div class="n">${avg==null?'—':avg}</div><div class="l">总分平均</div></div>
+      ${p.totalTarget!=null&&p.totalTarget!==''?`<div class="st"><div class="n">${p.totalTarget}</div><div class="l">总分目标</div></div>`:''}
+      ${p.totalPass!=null&&p.totalPass!==''?`<div class="st"><div class="n">${p.totalPass}</div><div class="l">总分及格</div></div>`:''}
+    </div>
+    <div class="score-chart">${chart}</div>
+  </div>`;
+}
+function scoreTestListHtml(p){
+  const ts=planTests(p).slice().sort((a,b)=>a.date<b.date?1:-1);
+  if(!ts.length)return '';
+  const subs=planSubjects(p);
+  return `<div class="score-sec"><div class="ph">🧾 测试记录（最新 ${Math.min(ts.length,20)} 条）</div>
+    <div class="test-list">${    ts.slice(0,20).map(t=>{
+      const s=subs.find(x=>String(x.id)===String(t.subjectId))||{};
+      return `<div class="test-row link" onclick="openTestModal('${t.id}')">
+        <span class="t-date">${esc(t.date||'')}</span>
+        <span class="t-subj">${esc(s.name||'已删科目')}</span>
+        ${t.paper?`<span class="t-paper">${esc(t.paper)}</span>`:'<span class="t-paper"></span>'}
+        <span class="t-score">${esc(t.score)}</span>
+        ${t.note?`<span class="t-note">${esc(t.note)}</span>`:'<span class="t-note"></span>'}
+      </div>`;
+    }).join('')}</div></div>`;
+}
+/* —— 科目增删改 —— */
+function openSubjectModal(id){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const s=id?planSubjects(p).find(x=>String(x.id)===String(id)):null;
+  window.__subjId=id||null;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">${s?'✏️ 编辑科目':'📘 添加科目'}</div>
+    <div class="pv-field"><label>科目名称</label><input type="text" id="subj-name" value="${esc(s?s.name:'')}" placeholder="如：实务 / 经济法 / 数学 / 英语"></div>
+    <div class="pv-row">
+      <div class="pv-field"><label>及格分数</label><input type="number" id="subj-pass" min="0" placeholder="如 60" value="${s&&s.pass!=null?s.pass:''}"></div>
+      <div class="pv-field"><label>目标分数</label><input type="number" id="subj-target" min="0" placeholder="如 75" value="${s&&s.target!=null?s.target:''}"></div>
+    </div>
+    <div class="pv-field"><label>满分（选填，仅用于图表上限参考）</label><input type="number" id="subj-full" min="0" placeholder="如 100" value="${s&&s.full!=null?s.full:''}"></div>
+    <div class="muted" style="font-size:12px;margin:0 0 12px">💡 及格 / 目标只填你关心的；留空则趋势图不画该参考线。科目与及格线都能随时改。</div>
+    <div class="modal-actions">
+      ${s?`<button class="btn btn-danger" onclick="delSubject('${s.id}')">删除</button>`:''}
+      <button class="btn btn-ghost" onclick="hideModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSubject()">保存</button>
+    </div>`;
+  showModal();
+}
+function saveSubject(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const name=document.getElementById('subj-name').value.trim();
+  if(!name){toast('请填写科目名称');return;}
+  const pass=parseFloat(document.getElementById('subj-pass').value);
+  const target=parseFloat(document.getElementById('subj-target').value);
+  const full=parseFloat(document.getElementById('subj-full').value);
+  p.subjects=p.subjects||[];
+  if(window.__subjId){const s=p.subjects.find(x=>String(x.id)===String(window.__subjId));if(s){s.name=name;s.pass=isNaN(pass)?null:pass;s.target=isNaN(target)?null:target;s.full=isNaN(full)?null:full;}}
+  else p.subjects.push({id:uid(),name,pass:isNaN(pass)?null:pass,target:isNaN(target)?null:target,full:isNaN(full)?null:full});
+  save();hideModal();renderScorePlan();toast('已保存');
+}
+function delSubject(id){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const s=(p.subjects||[]).find(x=>String(x.id)===String(id)); if(!s)return;
+  const n=planTests(p).filter(t=>String(t.subjectId)===String(id)).length;
+  const tail=n?`\n该科目下的 ${n} 条测试记录也会一并删除。`:'';
+  if(!confirm('确定删除科目「'+esc(s.name)+'」？'+tail+'\n此操作不可撤销。'))return;
+  p.subjects=(p.subjects||[]).filter(x=>String(x.id)!==String(id));
+  if(n)p.tests=(p.tests||[]).filter(t=>String(t.subjectId)!==String(id));
+  save();hideModal();renderScorePlan();toast(n?`已删除科目及 ${n} 条测试`:'已删除科目');
+}
+/* —— 测试登记增删改 —— */
+function openTestModal(id,defSubjectId){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const subs=planSubjects(p);
+  if(!subs.length){toast('请先添加科目');return;}
+  const t=id?planTests(p).find(x=>String(x.id)===String(id)):null;
+  window.__testId=id||null;
+  const opts=subs.map(s=>`<option value="${s.id}" ${((t&&String(t.subjectId)===String(s.id))||(!t&&String(defSubjectId)===String(s.id)))?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">${t?'✏️ 编辑测试':'🧪 登记一次测试'}</div>
+    <div class="pv-field"><label>科目</label><select id="test-subj" class="pv-input">${opts}</select></div>
+    <div class="pv-row">
+      <div class="pv-field"><label>测试日期</label><input type="date" id="test-date" value="${t?esc(t.date):todayKey()}"></div>
+      <div class="pv-field"><label>分数</label><input type="number" id="test-score" min="0" step="0.1" placeholder="得分" value="${t&&t.score!=null?t.score:''}"></div>
+    </div>
+    <div class="pv-field"><label>考卷序号（选填，用于总分趋势汇总）</label><input type="text" id="test-paper" value="${t?esc(t.paper||''):''}" placeholder="如：2024年1卷 / 2024年2卷"></div>
+    <div class="pv-field"><label>备注（选填）</label><input type="text" id="test-note" value="${t?esc(t.note||''):''}" placeholder="如：真题卷 / 模拟考 / 错题集中在第三章"></div>
+    <div class="modal-actions">
+      ${t?`<button class="btn btn-danger" onclick="delTest('${t.id}')">删除</button>`:''}
+      <button class="btn btn-ghost" onclick="hideModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveTest()">保存</button>
+    </div>`;
+  showModal();
+}
+function saveTest(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const subjectId=document.getElementById('test-subj').value;
+  const date=document.getElementById('test-date').value||todayKey();
+  const score=parseFloat(document.getElementById('test-score').value);
+  const note=(document.getElementById('test-note').value||'').trim();
+  const paper=(document.getElementById('test-paper').value||'').trim();
+  if(!subjectId){toast('请选择科目');return;}
+  if(isNaN(score)||score<0){toast('请填写有效分数');return;}
+  p.tests=p.tests||[];
+  if(window.__testId){const t=p.tests.find(x=>String(x.id)===String(window.__testId));if(t){t.subjectId=subjectId;t.date=date;t.score=score;t.note=note;t.paper=paper;}}
+  else p.tests.push({id:uid(),subjectId,date,score,note,paper});
+  save();hideModal();renderScorePlan();toast('已登记');
+}
+function delTest(id){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const t=(p.tests||[]).find(x=>String(x.id)===String(id)); if(!t)return;
+  if(!confirm('确定删除这条测试记录？\n（'+esc(t.date||'')+' · '+esc(t.score)+'分）\n此操作不可撤销。'))return;
+  p.tests=p.tests.filter(x=>String(x.id)!==String(id));
+  save();renderScorePlan();toast('已删除');
+}
+/* —— 总分趋势开关 + 总分目标/及格 —— */
+function toggleCombineTotal(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  p.combineTotal=!p.combineTotal; save(); renderScorePlan();
+  toast(p.combineTotal?'已开启总分趋势':'已关闭总分趋势');
+}
+function editTotalTarget(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">⚙ 总分目标 / 及格</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">仅用于总分趋势图上的参考线，可随时修改。</div>
+    <div class="pv-row">
+      <div class="pv-field"><label>总分及格线</label><input type="number" id="tt-pass" min="0" placeholder="如 300" value="${p.totalPass!=null?p.totalPass:''}"></div>
+      <div class="pv-field"><label>总分目标</label><input type="number" id="tt-target" min="0" placeholder="如 360" value="${p.totalTarget!=null?p.totalTarget:''}"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="hideModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveTotalTarget()">保存</button>
+    </div>`;
+  showModal();
+}
+function saveTotalTarget(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const tp=parseFloat(document.getElementById('tt-pass').value);
+  const tt=parseFloat(document.getElementById('tt-target').value);
+  p.totalPass=isNaN(tp)?null:tp; p.totalTarget=isNaN(tt)?null:tt;
+  save();hideModal();renderScorePlan();toast('已保存');
+}
 /* 考前冲刺清单：筛近 SPRINT_DAYS 天内复习过、但仍记不熟的卡片（只看最近状态，避免陈年旧卡混进来）；
    再加上用户手动复习钉住、或反复出错自动入列的卡片 / 题目（持久保留，不受近 5 天限制） */
 const SPRINT_DAYS=5;
@@ -4952,7 +5409,7 @@ function openCardPreview(deckId,id){
       <button class="btn ${c.fav?'btn-primary':'btn-outline'}" onclick="toggleFav('card','${c.id}',this)">${c.fav?'⭐ 已收藏':'☆ 收藏'}</button>
       <button class="btn btn-ghost" onclick="hideModal()">关闭</button>
       <button class="btn btn-outline" onclick="hideModal();locateCard('${d.id}','${c.id}','card')">📂 在卡组中查看</button>
-      <button class="btn btn-primary" onclick="startStudy('${d.id}',{scope:'all',order:'shuffle'});hideModal()">🃏 开始背诵</button>
+      <button class="btn btn-primary" onclick="startStudy('${d.id}',deckStudyCfg(getDeck('${d.id}')));hideModal()">🃏 开始背诵</button>
     </div>`;
   showModal();
 }
@@ -5029,7 +5486,7 @@ function renderFav(){
       f.cards.map(({d,c})=>`<div class="li">
         <div class="lt"><div class="a">${toRich(c.front)}</div><div class="b">${toRich(c.back)}</div>
           ${tagBadges(c)}<div class="fav-deck">📁 ${esc(d.name)}</div></div>
-        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startStudy('${d.id}',{scope:'all',order:'shuffle'})">🃏 背</button>
+        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startStudy('${d.id}',deckStudyCfg(getDeck('${d.id}')))">🃏 背</button>
           <button class="btn fav-on btn-sm" onclick="toggleFav('card','${c.id}',this)" title="取消收藏">⭐</button></div></div>`).join('')+`</div>`;
   }
   if(f.questions.length){
