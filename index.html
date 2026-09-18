@@ -842,7 +842,6 @@
       <div class="tabs">
         <div class="tab active" data-view="home" onclick="go('home',false)">首页</div>
         <div class="tab" data-view="fav" onclick="go('fav')">收藏</div>
-        <div class="tab" data-view="stats" onclick="go('stats')">统计</div>
         <div class="tab" data-view="plan" onclick="go('plan')">规划</div>
         <div class="tab" data-view="diagnosis" onclick="go('diagnosis')">诊断</div>
       </div>
@@ -1632,7 +1631,7 @@ function openHomeCreateMenu(){
     {icon:'📤',label:'导出 / 打印',onclick:"openExportCenter()"},
   ]);
 }
-/* 卡组详情：把翻面 / 批管 / 重置 / 导入 / 手写新增 / 设置 / 导出 / 重命名 / 删除 统一收进一个菜单 */
+/* 卡组详情：把翻面 / 批管 / 重置 / 导入 / 设置 / 导出 / 重命名 / 删除 统一收进一个菜单 */
 function openDeckMenu(did){
   const d=getDeck(did);if(!d)return;
   const cardN=(d.cards||[]).length, qN=(d.questions||[]).length, canQuiz=qN>0;
@@ -1643,7 +1642,7 @@ function openDeckMenu(did){
   items.push({icon:'⚙',label:'卡组设置',onclick:`openDeckSettings('${d.id}')`});
   items.push({icon:d.archived?'📤':'📦',label:d.archived?'取消归档（重新进入复习/统计）':'归档卡组',sub:d.archived?'已归档，将重新计入':'考完即归档，不再进入复习计划/统计/诊断',onclick:`${d.archived?'unarchiveDeck':'archiveDeck'}('${d.id}')`});
   items.push({divider:true});
-  items.push({icon:'📤',label:'导出此卡组',sub:'JSON / TXT / 打印清单',onclick:`openDeckExport('${d.id}')`});
+  items.push({icon:'📤',label:'导出此卡组',sub:'JSON / TXT / Markdown / 打印清单',onclick:`openDeckExport('${d.id}')`});
   items.push({icon:'✏️',label:'重命名卡组',onclick:`editDeckName('${d.id}')`});
   items.push({icon:'🗑',label:'删除卡组',danger:true,onclick:`delDeck('${d.id}')`});
   openSheet('更多操作',items);
@@ -1671,12 +1670,26 @@ function openStudyMenu(){
     {icon:'📝',label:'记问题',sub:'记录背诵中的疑问',onclick:"quickMemoFromStudy()"},
     {icon:'🔠',label:'阅读设置',sub:'字体 / 行距 / 左右对照',onclick:"openStudyReadSettings()"},
     {icon:'✍️',label:'默写方式：'+dispMap[studyState.display],sub:'翻面 / 遮挡 / 自检',onclick:"openStudyDispMenu()"},
+    {icon:'✏️',label:'编辑本张卡片',sub:'修改正反面 / 笔记 / 链接',onclick:"editCurrentStudyCard()"},
   ];
   if(!studyState.global){
     items.push({icon:'🗂',label:'范围：'+scopeMap[studyState.scope],sub:'全部 / 未背 / 复习 / 简单 / 困难 / 忘记',onclick:"openStudyScopeMenu()"});
     items.push({icon:'🔀',label:'顺序：'+(studyState.order==='shuffle'?'乱序':'顺序'),onclick:"openStudyOrderMenu()"});
   }
   openSheet('更多操作',items);
+}
+/* 背诵中编辑当前这张卡片：全局复习（跨卡组）需先反查卡片所属卡组 */
+function editCurrentStudyCard(){
+  const card=studyState.queue[studyState.idx];if(!card)return;
+  let deckId=studyState.deckId;
+  if(studyState.global){
+    let hit=null;
+    activeDecks().forEach(d=>{ if(hit)return; if((d.cards||[]).some(c=>c.id===card.id))hit=d.id; });
+    deckId=hit;
+  }
+  if(!deckId){toast('找不到该卡片所属卡组');return;}
+  closeSheet();
+  openEditCard(deckId,card.id);
 }
 function openStudyDispMenu(){
   openSheet('默写方式',[
@@ -2409,7 +2422,7 @@ function findDeckOfQuestion(qid){
 
 /* =================== IMPORT =================== */
 let importState={mode:'cards',fileName:'',text:'',parsed:null,targetId:null};
-function openImport(targetId){importState={mode:'cards',fileName:'',text:'',parsed:null,targetId:targetId||null};go('import');}
+function openImport(targetId,mode){importState={mode:(mode==='quiz'?'quiz':'cards'),fileName:'',text:'',parsed:null,targetId:targetId||null};go('import');}
 
 function renderImport(){
   const v=document.getElementById('view-import');
@@ -2436,8 +2449,7 @@ function renderImport(){
   if(!importState.parsed){
     v.innerHTML=`
     <div class="card">
-      <div class="row between" style="margin-bottom:10px">
-        <div class="section-title" style="margin:0">导入文档</div>
+      <div class="row" style="gap:8px;margin-bottom:10px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="goBack()">← 返回</button>
       </div>
       <div class="dropzone" onclick="document.getElementById('fileInput').click()">
@@ -2682,17 +2694,17 @@ function renderPreview(){
   }
   v.innerHTML=`
     <div class="card">
-      <div class="row between" style="margin-bottom:10px">
-        <div class="section-title" style="margin:0">AI 解析预览 · ${importState.mode==='quiz'?'题库刷题':'记忆卡片'}</div>
+      <div class="row" style="gap:8px;margin-bottom:10px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="goBack()">← 返回</button>
+        <div class="section-title" style="margin:0">AI 解析预览 · ${importState.mode==='quiz'?'题库刷题':'记忆卡片'}</div>
       </div>
-      <div class="muted" style="margin-bottom:10px">共识别 ${items.length} 条${importState.mode==='quiz'?'题目':'卡片'}。可编辑校对，删除识别错误的条目。</div>
+      <div class="row" style="gap:10px;margin-bottom:12px">
+        <button class="btn btn-ghost" style="flex:0 0 auto" onclick="importState.parsed=null;renderImport()">← 重新解析</button>
+        <button class="btn btn-primary btn-block" onclick="confirmImport()">✅ ${importState.targetId?'确认导入到本卡组':'确认生成卡组'}（${items.length}）</button>
+      </div>
+      <div class="muted">共识别 ${items.length} 条${importState.mode==='quiz'?'题目':'卡片'}。可编辑校对，删除识别错误的条目。</div>
     </div>
-    <div class="card">${body||'<div class="muted">无内容</div>'}</div>
-    <div class="row" style="gap:10px;margin:6px 0 20px">
-      <button class="btn btn-ghost" style="flex:0 0 auto" onclick="importState.parsed=null;renderImport()">← 重新解析</button>
-      <button class="btn btn-primary btn-block" onclick="confirmImport()">✅ ${importState.targetId?'确认导入到本卡组':'确认生成卡组'}（${items.length}）</button>
-    </div>`;
+    <div class="card">${body||'<div class="muted">无内容</div>'}</div>`;
 }
 function editQ(i,field,j,val){const p=importState.parsed.items[i];
   if(field==='opt')p.options[j]=val;else p[field]=val;}
@@ -2927,7 +2939,7 @@ function renderDetail(){
     <div class="mode-cards">
       <div class="mode-card m1" onclick="openStudyConfig('${d.id}')"><span class="em">🃏</span>进入卡片背诵</div>
       ${canQuiz?`<div class="mode-card m2" onclick="openQuizConfig('${d.id}')"><span class="em">📝</span>进入刷题模式</div>`
-                :`<div class="mode-card m2" style="opacity:.62" onclick="openNewQuestion('${d.id}')" title="该卡组还没有题目，点这里手写录一道"><span class="em">📝</span>还没有题目 · 去新增</div>`}
+                :`<div class="mode-card m2" style="opacity:.62" onclick="openImport('${d.id}','quiz')" title="该卡组还没有题目，点这里粘贴文本由 AI 解析导入"><span class="em">📝</span>还没有题目 · 去导入</div>`}
     </div>
 
     <div class="tabs2">
@@ -2938,8 +2950,8 @@ function renderDetail(){
   if(actSub){cur.sub=actSub;renderDetailSub(actSub);}
   else document.getElementById('detail-sub').innerHTML=`<div class="empty"><div class="em">📭</div>该卡组暂无内容
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button>
-      <button class="btn btn-primary btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button>
+      <button class="btn btn-primary btn-sm" onclick="openImport('${d.id}','cards')">➕ 导入卡片</button>
+      <button class="btn btn-primary btn-sm" onclick="openImport('${d.id}','quiz')">➕ 导入题目</button>
       <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入</button>
     </div></div>`;
 }
@@ -2950,8 +2962,8 @@ function renderDetailSub(sub){
   if(sub==='cards'){
     if(!d.cards.length){box.innerHTML=`<div class="empty"><div class="em">🃏</div>暂无卡片
       <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button>
-        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入卡片</button>
+        <button class="btn btn-primary btn-sm" onclick="openImport('${d.id}','cards')">➕ 导入卡片</button>
+        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入</button>
       </div></div>`;return;}
     const empties=d.cards.filter(isCardEmpty);
     const cards=d.cards.filter(c=>!isCardEmpty(c));
@@ -2963,7 +2975,7 @@ function renderDetailSub(sub){
         <button class="btn btn-ghost" onclick="clearEmptyCards('${d.id}')">🧹 清空空白卡</button></div>`;
     }
     const listSrc=cur.showEmpty?d.cards:cards;
-    box.innerHTML=bar+note+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="flipAll('${d.id}')">🔄 一键翻面</button><button class="btn btn-ghost btn-sm" onclick="openNewCard('${d.id}')">➕ 手写新增卡片</button></div>`+listSrc.map(c=>{
+    box.innerHTML=bar+note+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="flipAll('${d.id}')">🔄 一键翻面</button><button class="btn btn-ghost btn-sm" onclick="openImport('${d.id}','cards')">➕ 导入卡片</button></div>`+listSrc.map(c=>{
       const on=sel.ids.has(c.id);const ec=isCardEmpty(c)?' empty-card':'';
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${c.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('card','${d.id}','${c.id}')" title="更多操作">⋯</button></div>`;
@@ -2972,11 +2984,11 @@ function renderDetailSub(sub){
   }else if(sub==='questions'){
     if(!d.questions.length){box.innerHTML=`<div class="empty"><div class="em">📝</div>暂无题目
       <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button>
-        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入题库</button>
+        <button class="btn btn-primary btn-sm" onclick="openImport('${d.id}','quiz')">➕ 导入题目</button>
+        <button class="btn btn-outline btn-sm" onclick="openImport('${d.id}')">📥 导入</button>
       </div></div>`;return;}
     const bar=sel.active?batchBarHtml():'';
-    box.innerHTML=bar+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="resetDone('${d.id}')">🔁 重置已做状态</button><button class="btn btn-ghost btn-sm" onclick="openNewQuestion('${d.id}')">➕ 手写新增题目</button></div>`+d.questions.map(q=>{
+    box.innerHTML=bar+`<div class="sub-addbar"><button class="btn btn-ghost btn-sm" onclick="resetDone('${d.id}')">🔁 重置已做状态</button><button class="btn btn-ghost btn-sm" onclick="openImport('${d.id}','quiz')">➕ 导入题目</button></div>`+d.questions.map(q=>{
       const on=sel.ids.has(q.id);
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${q.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('question','${d.id}','${q.id}')" title="更多操作">⋯</button></div>`;
@@ -3298,8 +3310,6 @@ function openEditCard(id,cid){
   const d=getDeck(id);const c=d.cards.find(x=>x.id===cid);if(!c)return;
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">✏️ 编辑卡片</div>
-    <p class="muted" style="margin:2px 0 4px">可插入本地图片（结构图/流程图/几何图/思维导图），或选中文字后标记考点。图片压缩后随卡片存在本机。</p>
-    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 选中文字后底部弹出工具栏，可 <b>加粗 / 斜体 / 下划线</b> 或上 <b>荧光</b>；黄色荧光会作为背诵自检的判分关键词。</div>
     <div class="pv-field"><label>正面</label>${ceFieldHTML('cef',toRich(c.front))}</div>
     <div class="pv-field"><label>背面</label>${ceFieldHTML('ceb',toRich(c.back))}</div>
     <div class="pv-field"><label>📖 拓展笔记</label>${ceFieldHTML('cee',toRich(c.ext||''))}
@@ -3318,9 +3328,6 @@ function openEditCard(id,cid){
     <div class="pv-field"><label>📝 便签口诀</label>
       <textarea id="cenote" rows="2" placeholder="背诵时灵光一闪的记忆口诀…">${esc(c.note||'')}</textarea>
     </div>
-    <div class="pv-field"><label>⭐ 收藏</label>
-      <button class="btn ${c.fav?'btn-primary':'btn-outline'}" id="favEditBtn" onclick="toggleFav('card','${cid}',this)">${c.fav?'⭐ 已在收藏夹':'☆ 加入收藏夹'}</button>
-    </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveCardEdit('${id}','${cid}')">保存</button>
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
@@ -3333,14 +3340,14 @@ function saveCardEdit(id,cid){
   if(!hasContent(front)&&!hasContent(back)){toast('正反面不能都为空');return;}
   c.front=front;c.back=back;c.ext=document.getElementById('cee').innerHTML;c.note=(document.getElementById('cenote').value||'').trim();c.links=collectLinks();
   const dv=document.getElementById('cenext').value;if(dv){const ts=new Date(dv+'T00:00:00').getTime();if(!isNaN(ts))c.nextReview=ts;}
-  save();hideModal();renderDetailSub(cur.sub||'cards');renderDetail();toast('卡片已更新');
+  save();hideModal();renderDetailSub(cur.sub||'cards');renderDetail();
+  if(document.getElementById('view-study').classList.contains('active'))renderStudy();
+  toast('卡片已更新');
 }
 function openNewCard(id){
   const d=getDeck(id);if(!d)return;
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">➕ 新增卡片 · ${esc(d.name)}</div>
-    <p class="muted" style="margin:2px 0 4px">可直接插入本地图片（结构图/流程图/几何图/思维导图），或选中文字后标记考点。</p>
-    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 支持 <b>LaTeX 公式</b>：用 <code>$…$</code> 包围（如 <code>$\\int_a^b f(x)dx$</code>），点击「Σ 公式」可快速插入；高数/线代/概率公式均可正常展示。选中文字后底部弹出工具栏，可 <b>加粗 / 斜体 / 下划线</b> 或上 <b>荧光</b>。</div>
     <div class="pv-field"><label>正面（问题 / 提示）</label>${ceFieldHTML('ncf','')}</div>
     <div class="pv-field"><label>背面（答案 / 图示）</label>${ceFieldHTML('ncb','')}</div>
     <div class="pv-field"><label>📖 拓展笔记</label>${ceFieldHTML('nce','')}
@@ -3437,7 +3444,6 @@ function openNewQuestion(id){
   window.__qe_ans='';
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">➕ 新增题目 · ${esc(d.name)}</div>
-    <div class="muted" style="margin:0 0 10px;font-size:12px">💡 选项每行一个，自动编号 A/B/C/D；判断题无需填选项。题干 / 选项 / 解析均支持 <b>LaTeX 公式</b>，用 <code>$…$</code> 包围（如 <code>$P(A\\mid B)=\\frac{P(AB)}{P(B)}$</code>）。</div>
     <div class="pv-field"><label>题型</label>
       <select id="qe-type" onchange="qeRefresh()">
         <option value="single" selected>单选</option>
@@ -5580,6 +5586,44 @@ function buildDecksText(range,data,withAns,title){
   });
   return L.join('\n');
 }
+function buildDecksMarkdown(range,data,withAns,title){
+  const t=title||rangeTitle(range);
+  const L=[];
+  L.push('# 🧠 文档记忆卡 · 导出');
+  let cardN=0,quizN=0;data.forEach(s=>{cardN+=s.cards.length;quizN+=s.questions.length;});
+  L.push('');
+  L.push('> 范围：'+t+'　生成时间：'+todayKey());
+  L.push('> 共 '+data.length+' 个卡组 · '+cardN+' 张卡片 · '+quizN+' 道题目');
+  L.push('');
+  data.forEach(s=>{
+    L.push('## '+s.name);
+    if(s.cards.length){
+      L.push('');
+      L.push('### 记忆卡片（'+s.cards.length+'）');
+      s.cards.forEach((c,i)=>{
+        L.push('');
+        L.push('**Q'+(i+1)+'：** '+stripHtml(c.front));
+        if(withAns)L.push('**A：** '+stripHtml(c.back));
+        else L.push('_（答案留白，自行默写）_');
+        if(c.note)L.push('📝 口诀：'+stripHtml(c.note));
+        if(c.ext)L.push('🔗 拓展：'+stripHtml(c.ext));
+      });
+    }
+    if(s.questions.length){
+      L.push('');
+      L.push('### 题目（'+s.questions.length+'）');
+      s.questions.forEach((q,i)=>{
+        L.push('');
+        L.push('**Q'+(i+1)+'：** ['+TYPE_LABEL[q.type]+'] '+stripHtml(q.question));
+        (q.options||[]).forEach((o,j)=>L.push(String.fromCharCode(65+j)+'. '+stripHtml(o)));
+        if(withAns){L.push('**答案：** '+q.answer);if(q.analysis)L.push('**解析：** '+stripHtml(q.analysis));}
+        else L.push('_（答案留白）_');
+      });
+    }
+    L.push('');
+  });
+  return L.join('\n');
+}
 function msoHead(){return '<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">';}
 function wordCss(){return '<style>'
   +'@page{size:A4;margin:16mm;}'
@@ -5626,6 +5670,7 @@ function buildDecksHtml(range,data,withAns,title){
 }
 function downloadText(name,text){const blob=new Blob([text],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);toast('已下载 '+name);}
 function downloadWord(name,html){const blob=new Blob(['﻿'+html],{type:'application/msword;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);toast('已下载 '+name);}
+function downloadMarkdown(name,text){const blob=new Blob([text],{type:'text/markdown;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);toast('已下载 '+name);}
 function printHtml(html){
   const w=window.open('','_blank');
   if(!w){toast('浏览器拦截了打印窗口，请允许弹窗，或改用「导出 Word」');return;}
@@ -5646,11 +5691,12 @@ function openDeckExport(id){
   const d=getDeck(id);if(!d)return;
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">📤 导出 / 打印「${esc(d.name)}」</div>
-    <div class="muted" style="margin-bottom:10px">可导出 <b>JSON / TXT</b>，或打印<b>纸质背诵清单</b>（适合图书馆无设备复习）。</div>
+    <div class="muted" style="margin-bottom:10px">可导出 <b>JSON / TXT / Markdown</b>，或打印<b>纸质背诵清单</b>（适合图书馆无设备复习）。</div>
     <div class="pv-field"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="exp-ans" checked> 包含答案（取消勾选＝留白，适合纸质默写自测）</label></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="deckExportJson('${d.id}')">📦 导出 JSON</button>
       <button class="btn" onclick="deckExportTxt('${d.id}')">📄 导出 TXT</button>
+      <button class="btn" onclick="deckExportMd('${d.id}')">📝 导出 Markdown</button>
       <button class="btn btn-outline" onclick="deckPrint('${d.id}')">🖨 打印清单</button>
       <button class="btn btn-ghost" onclick="hideModal()">关闭</button>
     </div>`;
@@ -5668,6 +5714,12 @@ function deckPrint(id){
   const d=getDeck(id);if(!d)return;
   const withAns=document.getElementById('exp-ans')?document.getElementById('exp-ans').checked:true;
   printHtml(buildDecksHtml('deck',deckExportData(id),withAns,d.name));
+  hideModal();
+}
+function deckExportMd(id){
+  const d=getDeck(id);if(!d)return;
+  const withAns=document.getElementById('exp-ans')?document.getElementById('exp-ans').checked:true;
+  downloadMarkdown(safeName(d.name)+'_'+todayKey()+'.md',buildDecksMarkdown('deck',deckExportData(id),withAns,d.name));
   hideModal();
 }
 function safeName(s){return (s||'卡组').replace(/[\\/:*?"<>|]/g,'');}
