@@ -1659,7 +1659,21 @@ function openQuizMenu(){
   openSheet('更多操作',[
     {icon:'📝',label:'今日备忘录',sub:'记录背诵中遇到的问题',onclick:"openMemo()"},
     {icon:'⚙',label:'刷题设置',onclick:"openQuizConfigFromQuiz()"},
+    {icon:'✏️',label:'编辑本道题目',sub:'修改题干 / 选项 / 答案 / 解析',onclick:"editCurrentQuizQuestion()"},
   ]);
+}
+/* 刷题中编辑当前这道题目：全局刷题（跨卡组）需先反查题目所属卡组 */
+function editCurrentQuizQuestion(){
+  const q=quiz.queue[quiz.idx];if(!q)return;
+  let deckId=quiz.deckId;
+  if(quiz.global){
+    let hit=null;
+    activeDecks().forEach(d=>{ if(hit)return; if((d.questions||[]).some(x=>x.id===q.id))hit=d.id; });
+    deckId=hit;
+  }
+  if(!deckId){toast('找不到该题目所属卡组');return;}
+  closeSheet();
+  openEditQuestion(deckId,q.id);
 }
 /* 卡片背诵页头部：设置 / 记问题 / 默写方式 / 范围 / 顺序 —— 与刷题页「更多」结构一致 */
 function openStudyMenu(){
@@ -1669,13 +1683,8 @@ function openStudyMenu(){
     {icon:'⚙',label:'背诵设置',sub:studyState.global?'退出后重进可改范围':'范围 / 标签 / 顺序 / 默写方式',onclick:"openStudyConfigFromStudy()"},
     {icon:'📝',label:'记问题',sub:'记录背诵中的疑问',onclick:"quickMemoFromStudy()"},
     {icon:'🔠',label:'阅读设置',sub:'字体 / 行距 / 左右对照',onclick:"openStudyReadSettings()"},
-    {icon:'✍️',label:'默写方式：'+dispMap[studyState.display],sub:'翻面 / 遮挡 / 自检',onclick:"openStudyDispMenu()"},
     {icon:'✏️',label:'编辑本张卡片',sub:'修改正反面 / 笔记 / 链接',onclick:"editCurrentStudyCard()"},
   ];
-  if(!studyState.global){
-    items.push({icon:'🗂',label:'范围：'+scopeMap[studyState.scope],sub:'全部 / 未背 / 复习 / 简单 / 困难 / 忘记',onclick:"openStudyScopeMenu()"});
-    items.push({icon:'🔀',label:'顺序：'+(studyState.order==='shuffle'?'乱序':'顺序'),onclick:"openStudyOrderMenu()"});
-  }
   openSheet('更多操作',items);
 }
 /* 背诵中编辑当前这张卡片：全局复习（跨卡组）需先反查卡片所属卡组 */
@@ -2459,7 +2468,7 @@ function renderImport(){
         <input type="file" id="fileInput" accept=".txt,.md,.csv,.json,application/json" style="display:none" onchange="onFile(this)">
       </div>
       <div class="muted" style="margin:12px 2px 6px">或直接粘贴文本：</div>
-      <textarea id="pasteArea" placeholder="在此粘贴文本，系统会按下方规则自动识别格式…"></textarea>
+      <textarea id="pasteArea" placeholder="在此粘贴文本，系统会按下方规则自动识别格式…" oninput="importState.text=this.value">${esc(importState.text)}</textarea>
       <div class="section-title" style="margin:14px 0 10px">AI 识别模式</div>
       <div class="seg">
         <div class="opt ${importState.mode==='cards'?'active':''}" onclick="setMode('cards')">
@@ -2694,15 +2703,10 @@ function renderPreview(){
   }
   v.innerHTML=`
     <div class="card">
-      <div class="row" style="gap:8px;margin-bottom:10px;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="goBack()">← 返回</button>
-        <div class="section-title" style="margin:0">AI 解析预览 · ${importState.mode==='quiz'?'题库刷题':'记忆卡片'}</div>
-      </div>
-      <div class="row" style="gap:10px;margin-bottom:12px">
+      <div class="row" style="gap:10px;margin-bottom:0">
         <button class="btn btn-ghost" style="flex:0 0 auto" onclick="importState.parsed=null;renderImport()">← 重新解析</button>
         <button class="btn btn-primary btn-block" onclick="confirmImport()">✅ ${importState.targetId?'确认导入到本卡组':'确认生成卡组'}（${items.length}）</button>
       </div>
-      <div class="muted">共识别 ${items.length} 条${importState.mode==='quiz'?'题目':'卡片'}。可编辑校对，删除识别错误的条目。</div>
     </div>
     <div class="card">${body||'<div class="muted">无内容</div>'}</div>`;
 }
@@ -3404,7 +3408,7 @@ function qeRefresh(id,qid){
   const prev=document.getElementById('qe-answer');
   if(prev){
     if(document.getElementById('qe-answer-sel'))window.__qe_ans=document.getElementById('qe-answer-sel').value;
-    else{const sel=Array.from(document.querySelectorAll('#qe-answer input[name="qe-ans"]:checked')).map(e=>e.value);window.__qe_ans=sel.sort().join('');}
+    else{const sel=Array.from(document.querySelectorAll('#qe-answer input[name="qe-ans"]:checked')).map(e=>e.value);if(sel.length)window.__qe_ans=sel.sort().join('');}
   }
   const type=document.getElementById('qe-type').value;
   const optLines=document.getElementById('qe-options').value.split('\n').map(s=>s.trim()).filter(s=>s);
@@ -3436,7 +3440,9 @@ function saveQuestionEdit(id,qid){
   if(!question){toast('题干不能为空');return;}
   if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
   q.type=type;q.question=question;q.options=optLines;q.analysis=analysis;q.answer=answer;
-  save();hideModal();renderDetailSub(cur.sub||'questions');renderDetail();toast('题目已更新');
+  save();hideModal();renderDetailSub(cur.sub||'questions');renderDetail();
+  if(document.getElementById('view-quiz').classList.contains('active'))renderQuiz();
+  toast('题目已更新');
 }
 /* 手写新增题目（与「手写新增卡片」对称；复用 qe-* 表单结构与 qeRefresh 答案联动） */
 function openNewQuestion(id){
@@ -3706,7 +3712,7 @@ function renderStudy(){
     <div class="row between" style="margin-bottom:10px;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="goBack()">← 退出</button>
       <div class="row" style="gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="openStudyMenu()" title="更多（设置 / 记问题 / 默写方式 / 范围 / 顺序）">⋯ 更多</button>
+        <button class="btn btn-ghost btn-sm" onclick="openStudyMenu()" title="更多（设置 / 记问题 / 阅读设置 / 编辑卡片）">⋯ 更多</button>
         <span class="badge ${DISP_BADGE[dispKey]}">${dispLabelMap[dispKey]}</span>
       </div>
     </div>
@@ -4019,7 +4025,8 @@ function rangeEmptyMsg(range){
 /* ---- 刷题配置面板 ---- */
 function openQuizConfig(id){
   const d=getDeck(id);if(!d.questions||!d.questions.length){toast('没有题目');return;}
-  window.__qc={id,range:'all',types:null,order:'random',shuffle:defaultShuffle()};
+  const last=DB.meta.lastQuiz||{};
+  window.__qc={id,range:last.range||'all',types:(last.types!==undefined?last.types:null),order:last.order||'random',shuffle:(last.shuffle!==undefined?last.shuffle:defaultShuffle())};
   renderQuizConfig();showModal();
 }
 function qcTypesArr(){const c=window.__qc;return c.types===null?['single','multiple','judge']:c.types;}
@@ -4076,7 +4083,8 @@ function qcStart(){
   const types=c.types===null?null:c.types;
   if(types&&types.length===0){toast('请至少选择一种题型');return;}
   hideModal();
-  DB.meta.shuffleOptions=c.shuffle;save();
+  DB.meta.shuffleOptions=c.shuffle;
+  DB.meta.lastQuiz={range:c.range,types,order:c.order,shuffle:c.shuffle};save();
   quiz.shuffle=c.shuffle;quiz.orders={};
   if(c.fromQuiz){
     const cfg={range:c.range,types,order:c.order,shuffle:c.shuffle};
