@@ -297,8 +297,9 @@
     .nav-row .nav-mid{margin:0 6px}
     /* 自检（竖屏上下阅读）PC 端：卡面与默写区等宽等高、初始高度收紧，避免把翻页键挤到下一屏 */
     .self-vert{display:block}
-    .self-vert .flashcard{width:85%;max-width:1600px;margin-inline:auto;min-height:clamp(140px,28vh,240px);height:clamp(140px,28vh,240px)}
-    .self-vert .split-pane.self-pane{width:85%;max-width:1600px;margin:14px auto 0;min-height:0;height:clamp(140px,28vh,240px);overflow:auto}
+    /* 未开左右对照：两张卡（卡面+默写区）各取「其他模式一张卡高 − 间距」的一半，使两张 + 间距 = 其他模式一张卡高 */
+    .self-vert .flashcard{width:85%;max-width:1600px;margin-inline:auto;min-height:clamp(213px,calc(29vh - 7px),373px);height:clamp(213px,calc(29vh - 7px),373px)}
+    .self-vert .split-pane.self-pane{width:85%;max-width:1600px;margin:14px auto 0;min-height:0;height:clamp(213px,calc(29vh - 7px),373px);overflow:auto}
     .self-vert .self-box{margin-top:0}
   }
 
@@ -3734,7 +3735,7 @@ function renderStudy(){
     <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${studyState.idx+1}/${total} 张卡</span>
       <div class="q-bar"><div style="width:${Math.round(studyState.idx/total*100)}%"></div></div></div>
     ${studyCardHtml(card)}
-    ${(studyState.flipped||(dispKey==='occlude'&&pcWide()))?studyFeedbackHtml(card):''}
+    ${(studyState.flipped||(dispKey==='occlude'&&pcWide())||dispKey==='self')?studyFeedbackHtml(card):''}
     <div class="nav-row">
       <button class="btn btn-ghost" ${studyState.idx>0?'':'disabled'} onclick="studyPrev()">◀ 上一张</button>
       <span class="nav-mid">${studyState.idx+1} / ${total}</span>
@@ -3843,7 +3844,7 @@ function studyCardHtml(card){
         <div class="hint">👆 点一下开始默写</div></div>`;
     }
     const reveal=studyState.reveal||0;
-    return `<div class="flashcard" id="flash">
+    return `<div class="flashcard" id="flash" onclick="flipCard(event)">
       <div class="occlude-wrap" id="ocWrap">
         <div ${faceAttr}>${fmtAnswer(back(card))}</div>
         <div class="occlude-mask" id="ocMask" style="height:${100-reveal}%">
@@ -3904,6 +3905,10 @@ function studyFeedbackHtml(card){
 function flipCard(e){
   // 点图片 = 放大看图（结构图/几何图），不翻面
   if(e&&e.target&&e.target.tagName==='IMG'){e.stopPropagation();zoomImg(e.target.src);return;}
+  // 遮挡模式刚拖动掀开松手：该 click 不翻回，交给拖动逻辑
+  if(window.__ocJustDragged){e&&e.stopPropagation&&e.stopPropagation();return;}
+  // 遮挡模式拖动手柄：只负责掀开，点击它不翻回
+  if(e&&e.target&&e.target.closest&&e.target.closest('.occlude-handle')){return;}
   // 若卡面内存在有效文字选区（长按 / 拖拽选词标记），不要翻面，让选区与标记工具栏继续生效
   const sel=window.getSelection();
   if(sel&&!sel.isCollapsed&&sel.toString().trim()){
@@ -3937,7 +3942,7 @@ function ocStart(e){
   if(e&&e.preventDefault)e.preventDefault();
   const wrap=document.getElementById('ocWrap');if(!wrap)return;
   const move=ev=>{const rect=wrap.getBoundingClientRect();let p=(ev.clientY-rect.top)/rect.height*100;p=Math.max(0,Math.min(100,p));ocSet(p);};
-  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);};
+  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);window.__ocJustDragged=true;setTimeout(()=>{window.__ocJustDragged=false;},250);};
   document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);move(e);
 }
 /* 关键词归一化（去标点空白，转小写） */
