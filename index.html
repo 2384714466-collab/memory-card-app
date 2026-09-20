@@ -295,6 +295,11 @@
     .nav-row{justify-content:center;flex-wrap:wrap}
     .nav-row .btn{flex:0 0 auto;min-width:132px}
     .nav-row .nav-mid{margin:0 6px}
+    /* 自检（竖屏上下阅读）PC 端：卡面与默写区等宽等高、初始高度收紧，避免把翻页键挤到下一屏 */
+    .self-vert{display:block}
+    .self-vert .flashcard{width:85%;max-width:1600px;margin-inline:auto;min-height:clamp(140px,28vh,240px);height:clamp(140px,28vh,240px)}
+    .self-vert .split-pane.self-pane{width:85%;max-width:1600px;margin:14px auto 0;min-height:0;height:clamp(140px,28vh,240px);overflow:auto}
+    .self-vert .self-box{margin-top:0}
   }
 
   /* quiz */
@@ -1136,7 +1141,7 @@ const LS_QUOTA=5*1024*1024;   // 浏览器 localStorage 常见上限 ≈5MB
 /* 每 1 小时 + 切到后台 + 关闭页面时，把当前数据写入独立的备份键；
    页面崩溃 / 误删数据也能从历史快照一键恢复。仅在数据有变化时才存，避免无谓占用。 */
 const BACKUP_KEY='memoryCardDB_v1_backups';
-const BACKUP_MAX=30;                               // 循环保留最近 30 个快照
+const BACKUP_MAX=10;                               // 循环保留最近 10 个快照，超出自动删除最旧
 function loadBackups(){try{const s=rawGet(BACKUP_KEY);const a=s?JSON.parse(s):[];return Array.isArray(a)?a:[];}catch(e){return [];}}
 function dbSig(obj){
   const o=obj||DB;const c=JSON.parse(JSON.stringify(o));   // 排除每次 save 写入的易变字段，否则“无变化”永远判定为变化
@@ -1146,7 +1151,7 @@ function dbSig(obj){
 function autoBackup(opts){
   opts=opts||{};
   const sig=dbSig();
-  if(sig===autoBackup._last)return;                // 数据无变化，跳过（省空间）
+  if(opts.force!==true && sig===autoBackup._last)return;                // 自动备份：数据无变化则跳过（省空间）；手动「立即备份」用 force:true 强制存一份
   autoBackup._last=sig;
   const list=loadBackups();
   list.push({t:now(),data:JSON.parse(JSON.stringify(DB))});
@@ -1176,7 +1181,7 @@ function openBackupCenter(){
     <div class="plan-sec-note">本地每 <b>1 小时</b>自动备份一次，切到后台 / 关闭页面时也会立即备份，最多保留最近 <b>${BACKUP_MAX}</b> 份快照。页面崩溃或误删数据时可从此处一键恢复。</div>
     <div class="row between" style="margin:10px 0">
       <span class="muted"><span class="store-status-dot ${storageAvailable()?'ok':'bad'}"></span>${storageAvailable()?'本地存储正常':'⚠️ 本地存储不可用，请用下方导出留底'}</span>
-      <button class="btn btn-primary btn-sm" onclick="autoBackup({toast:true});openBackupCenter()">💾 立即备份</button></div>
+      <button class="btn btn-primary btn-sm" onclick="autoBackup({toast:true,force:true});openBackupCenter()">💾 立即备份</button></div>
     <div class="row" style="gap:8px;margin:0 0 12px;flex-wrap:wrap">
       <button class="btn btn-outline btn-sm" onclick="exportRecords()">⬇ 导出记录(JSON)</button>
       <button class="btn btn-outline btn-sm" onclick="importRecords()">⬆ 导入记录</button>
@@ -2589,23 +2594,28 @@ function parseOneQuestion(block){
 }
 function parseCards(text){
   // 卡片 AI 识别：自动判定以下三种格式之一（整篇按同一种格式解析）
-  // ① # 标题模式：行以「# 」开头 → 正面；直到下一条 # 之前（含 ##/###/列表/文字）均为背面
+  // ① # 标题模式：单个「#」（其后可有或没有空格）= 正面；##/###/列表「-」/普通文本均归同一张卡的背面（剔除 #/##/- 前缀）
   // ② 词条+列表模式：非 -、非 # 的独立单行 = 正面；往下全部「-」开头内容合并为背面
   // ③ 双行换行模式：无任何标记、连续两行非空文本 = 正面 / 背面
   const lines=text.split(/\r?\n/);
-  // 兼容：含制表符按「Tab 分隔」解析（一行一条卡片，低冲突风险）
+  // 兼容：含制表符优先按「Tab 分隔」解析；但仅当确实存在双列行时才采用，否则回退启发式，避免「从表格/网页复制的缩进 Tab」误判为空
   if(lines.some(l=>l.includes('\t'))){
     const out=[];
     lines.map(l=>l.trim()).filter(l=>l).forEach(l=>{
       const p=l.split('\t');
       if(p.length>=2)out.push(mkCard(p[0].trim(),p.slice(1).join('\t').trim()));
     });
-    return out;
+    if(out.length)return out;
   }
-  const hasHeading=lines.some(l=>/^\s*#\s/.test(l));
+  const hasHeading=lines.some(l=>/^\s*#(?!#)/.test(l));        // 存在单个「#」开头行（无论 # 后有无空格）即按标题模式解析
   const hasTermList=(()=>{
-    for(let i=0;i<lines.length-1;i++){
-      if(lines[i].trim() && !/^\s*[-*#]\s/.test(lines[i]) && /^\s*[-*]\s/.test(lines[i+1]))return true;
+    for(let i=0;i<lines.length;i++){
+      const t=lines[i].trim();
+      if(!t || /^\s*[-*#]\s/.test(lines[i]))continue;
+      for(let k=i+1;k<lines.length;k++){
+        if(/^\s*[-*]\s/.test(lines[k]))return true;   // 术语后（可隔空行）出现列表行
+        if(lines[k].trim())break;                     // 遇到非列表非空行则不算
+      }
     }
     return false;
   })();
@@ -2613,9 +2623,10 @@ function parseCards(text){
   if(hasTermList)  return parseCardsTermList(lines);
   return parseCardsTwoLine(lines);
 }
-// 模式①：# 标题
+// 模式①：# 标题（支持 # 后有无空格；单个 # = 正面分隔符，##/###/列表/普通文本均归背面）
 function parseCardsHeading(lines){
   const out=[];let front=null;let back=[];
+  const isFront=raw=>/^\s*#(?!#)/.test(raw);    // 单个 # 开头 = 新卡片正面；##/### 视为背面
   const flush=()=>{
     if(front!==null){
       const f=front.trim();
@@ -2625,8 +2636,8 @@ function parseCardsHeading(lines){
     front=null;back=[];
   };
   for(const raw of lines){
-    if(/^\s*#\s/.test(raw)){flush();front=raw.replace(/^\s*#\s*/,'').trim();}
-    else{if(front===null)continue;back.push(raw.replace(/^\s*#+\s?/,'').trim());} // 剔除 ##/###，保留空行换行
+    if(isFront(raw)){flush();front=raw.replace(/^\s*#\s?/,'').trim();}   // 去掉前导 # 及一个可选空格，得到正面文字
+    else{if(front===null)continue;back.push(raw.replace(/^\s*#+\s?/,'').replace(/^\s*[-*]\s/,'').trim());} // 剔除 ##/### 与列表前缀，保留换行
   }
   flush();
   return out;
@@ -2638,14 +2649,18 @@ function parseCardsTermList(lines){
     const raw=lines[i];
     if(!raw.trim()){i++;continue;}
     if(/^\s*[-*]\s/.test(raw)){
-      // 孤立列表行：并入上一张卡片背面，避免丢失
-      if(out.length){const p=out[out.length-1];p.back=(p.back?p.back+'\n':'')+raw.trim();}
+      // 孤立列表行：并入上一张卡片背面，避免丢失（去掉列表前缀）
+      if(out.length){const p=out[out.length-1];p.back=(p.back?p.back+'\n':'')+raw.trim().replace(/^\s*[-*]\s/,'');}
       i++;continue;
     }
-    // 非 -、非 # 的独立单行 = 正面；往下全部 - 开头内容合并为背面
+    // 非 -、非 # 的独立单行 = 正面；往下全部 - 开头内容合并为背面（可隔空行）
     const front=raw.trim();
     const back=[];let k=i+1;
-    while(k<lines.length && /^\s*[-*]\s/.test(lines[k])){back.push(lines[k].trim());k++;}
+    while(k<lines.length){
+      if(/^\s*[-*]\s/.test(lines[k])){back.push(lines[k].trim().replace(/^\s*[-*]\s/,''));k++;}
+      else if(!lines[k].trim()){k++;}   // 跳过正文与列表之间的空行
+      else break;
+    }
     out.push(mkCard(front,back.join('\n')));
     i=k;
   }
@@ -3845,7 +3860,8 @@ function studyCardHtml(card){
   }
   if(disp==='self'){
     if(!studyState.flipped){
-      return `<div class="flashcard" id="flash">
+      return `<div class="self-vert">
+      <div class="flashcard" id="flash">
         <div ${faceAttr}>${toRich(face(card))}</div>
       </div>
       <div class="split-pane self-pane">
@@ -3854,10 +3870,11 @@ function studyCardHtml(card){
           <textarea id="selfAns" class="inp" rows="3" placeholder="凭记忆默写…">${esc(studyState.selfAns||'')}</textarea>
           <button class="btn btn-primary" onclick="selfCheck('${card.id}')">核对答案</button>
         </div>
-      </div>`;
+      </div></div>`;
     }
     const r=studyState.selfRes;
-    return `<div class="flashcard" id="flash">
+    return `<div class="self-vert">
+    <div class="flashcard" id="flash">
       <div ${faceAttr}>${toRich(face(card))}</div>
     </div>
     <div class="split-pane self-pane">
@@ -3868,7 +3885,7 @@ function studyCardHtml(card){
         <button class="btn btn-ghost btn-sm" onclick="selfRetry('${card.id}')">↺ 重答</button>
       </div>
       ${studyCardExtras(card)}
-    </div>`;
+    </div></div>`;
   }
   return `<div class="flashcard ${studyState.flipped?'flipped':''}" id="flash" onclick="flipCard(event)">
     <div ${faceAttr}>${studyState.flipped?fmtAnswer(back(card)):toRich(face(card))}</div>
