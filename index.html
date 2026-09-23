@@ -305,6 +305,9 @@
 
   /* quiz */
   .q-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .q-head-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 14px}
+  .q-head-row .q-text{font-size:16px;font-weight:700;line-height:1.6;flex:1;min-width:0}
+  .q-head-row .badge{flex-shrink:0;margin-top:3px}
   .q-bar{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden}
   .q-bar>div{height:100%;background:var(--primary);transition:.3s}
   .q-done{display:flex;align-items:center;gap:12px;margin-bottom:12px}
@@ -491,15 +494,6 @@
   .cd-card.near{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a}
   .cd-card.near .cd-num{color:#b45309}
   .cd-card .cd-acts{display:flex;gap:4px;flex-shrink:0}
-  /* 目标进度 */
-  .goal-row{margin-bottom:14px}
-  .goal-row:last-child{margin-bottom:0}
-  .goal-row .gr-h{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
-  .goal-row .gr-h b{font-weight:700}
-  .goal-row .gr-sub{font-size:12px;color:var(--text-3);margin-top:5px}
-  .goal-row .gr-sub.ok{color:var(--green-dark);font-weight:600}
-  .goal-row.gr-off{opacity:.62}
-  .goal-row.gr-off .gr-h b{font-weight:600;color:var(--text-3)}
   /* 日历 */
   .cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .cal-hd .m{font-size:15px;font-weight:800}
@@ -563,13 +557,8 @@
   .cd-card{position:relative}
   .plan-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
   .cd-card .plan-dot{margin-left:2px}
-  .gr-buf{font-size:12px;color:var(--orange);background:#fff7ed;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;margin-bottom:12px;line-height:1.5}
-  .gr-tag{font-style:normal;font-size:11px;color:#b45309;background:#fef3c7;border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:600}
-  .gr-empty{font-size:13px;color:var(--text-3);background:#f8fafc;border:1px dashed var(--border);border-radius:10px;padding:14px;text-align:center;line-height:1.6}
-  .plan-sum{font-size:12px;color:var(--text-3);margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:8px}
-  .plan-sum b{color:var(--primary-dark)}
-  .pv-row{display:flex;gap:10px}
-  .pv-row .pv-field{flex:1}
+  .pv-row{display:flex;gap:10px;flex-wrap:wrap}
+  .pv-row .pv-field{flex:1 1 150px;min-width:0}
   .plan-colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
   .plan-colors .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;opacity:.5;border:2px solid #fff;box-shadow:0 0 0 1px var(--border)}
   .plan-colors .dot.on{opacity:1;box-shadow:0 0 0 2px var(--primary);transform:scale(1.12)}
@@ -594,7 +583,7 @@
   .score-stats .st .n{font-size:17px;font-weight:700;color:var(--text)}
   .score-stats .st .l{font-size:11px;color:var(--text-3);margin-top:2px}
   .score-chart{width:100%;overflow-x:auto;margin-top:6px}
-  .score-chart svg{display:block;max-width:100%}
+  .score-chart svg{display:block;width:100%;height:auto}
   .score-no-data{font-size:12px;color:var(--text-3);text-align:center;padding:14px 0}
   .score-chart svg circle{cursor:pointer;transition:opacity .12s}
   .score-chart svg circle:hover{opacity:.75}
@@ -1545,22 +1534,28 @@ async function syncPush(silent){
     if(!silent)toast('已上传到云端');
   }catch(e){ if(!silent)toast('上传失败：'+e.message); syncStatus('❌ 上传失败：'+e.message); }
 }
-async function syncPull(){
-  const c=syncCfg();if(!c){toast('请先配置同步');return;}
+async function syncPull(silent){
+  const c=syncCfg();if(!c){if(!silent)toast('请先配置同步');return;}
   try{
     const remote=await ghGet(c.owner,c.repo,'memory-card-data.json',c.token);
-    if(!remote){toast('云端还没有数据，先上传');syncStatus('云端暂无数据');return;}
+    if(!remote){if(!silent)toast('云端还没有数据，先上传');syncStatus('云端暂无数据');return;}
     const data=JSON.parse(remote.text);
     const remoteT=data.meta&&data.meta.savedAt||0;
     const localT=DB.meta&&DB.meta.savedAt||0;
     if(remoteT>=localT){
       DB=data;rawSet(LS_KEY,remote.text);
       syncStatus('✅ 已从云端拉取 '+new Date().toLocaleTimeString());
-      toast('已从云端同步');renderHome();
+      if(!silent)toast('已从云端同步');
+      if(!silent)renderHome();
     }else{
-      syncStatus('本地更新更新时间更新，跳过拉取（可点上传覆盖云端）');
+      syncStatus('本地更新时间更新，跳过拉取（可点上传覆盖云端）');
     }
-  }catch(e){ toast('拉取失败：'+e.message); syncStatus('❌ '+e.message); }
+  }catch(e){ if(!silent)toast('拉取失败：'+e.message); syncStatus('❌ '+e.message); }
+}
+/* 进入背诵 / 刷题前静默拉取云端最新（仅已配置同步 Token 时触发，避免无配置弹提示） */
+async function maybeSyncPull(silent){
+  const c=syncCfg();if(!c||!c.token)return;
+  await syncPull(silent);
 }
 function openSync(){
   const c=syncCfg()||{owner:'2384714466-collab',repo:'memory-card-app',token:'',auto:false};
@@ -1645,7 +1640,7 @@ function openDeckMenu(did){
   if(cardN||canQuiz)items.push({icon:sel.active?'✕':'☑',label:sel.active?'退出批量管理':'批量管理',onclick:"selToggle()"});
   items.push({icon:'📥',label:'导入到本卡组',sub:'题目 / 卡片',onclick:`openImport('${d.id}')`});
   items.push({icon:'📂',label:'移动到文件夹',sub:'整理归类到其它文件夹',onclick:`openMoveDeckMenu('${d.id}')`});
-  items.push({icon:'⚙',label:'卡组设置',onclick:`openDeckSettings('${d.id}')`});
+  items.push({icon:'⚙',label:'卡组设置',sub:'设置背诵周期',onclick:`openDeckSettings('${d.id}')`});
   items.push({icon:d.archived?'📤':'📦',label:d.archived?'取消归档（重新进入复习/统计）':'归档卡组',sub:d.archived?'已归档，将重新计入':'考完即归档，不再进入复习计划/统计/诊断',onclick:`${d.archived?'unarchiveDeck':'archiveDeck'}('${d.id}')`});
   items.push({divider:true});
   items.push({icon:'📤',label:'导出此卡组',sub:'JSON / TXT / Markdown / 打印清单',onclick:`openDeckExport('${d.id}')`});
@@ -2059,7 +2054,6 @@ function openDeckSettings(id){
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">⚙ 卡组设置 · ${esc(d.name)}</div>
     <div class="pv-field"><label>背诵周期（艾宾浩斯间隔）</label>${opts}
-      <div class="muted" style="font-size:12px;margin-top:6px">标准 0/1/2/4/7/15/30 天；期末冲刺 1/2/3/5 天；考研长线 1/3/7/15/30/60/90 天。切换后立即对新复习生效。</div>
     </div>
     <div class="modal-actions"><button class="btn btn-primary" onclick="hideModal()">完成</button></div>`;
   showModal();
@@ -2441,26 +2435,9 @@ function openImport(targetId,mode){importState={mode:(mode==='quiz'?'quiz':'card
 
 function renderImport(){
   const v=document.getElementById('view-import');
-  const rulesCards=`
-    <div class="rules-box">
-      <div class="rb-h">🃏 记忆卡片识别规则</div>
-      <ul>
-        <li><b>① # 标题</b><span># 文字 → 正面；其余（含 ##/###、列表）为背面</span></li>
-        <li><b>② 词条+列表</b><span>单行 + 下一行「- 要点」→ 正面 / 背面</span></li>
-        <li><b>③ 双行</b><span>正面↵背面，连续两行一对</span></li>
-      </ul>
-      <div class="mo">空格 / 缩进自动忽略</div>
-    </div>`;
-  const rulesQuiz=`
-    <div class="rules-box">
-      <div class="rb-h">📝 题库识别规则</div>
-      <ul>
-        <li><b>① 题号+题干</b><span>1. 题目内容</span></li>
-        <li><b>② 选项</b><span>A.… B.… C.… D.…</span></li>
-        <li><b>③ 答案/解析</b><span>答案：A　解析：…</span></li>
-      </ul>
-      <div class="mo">自动识别 单选 / 多选 / 判断</div>
-    </div>`;
+  const rulesPlaceholder = importState.mode==='cards'
+    ? '识别规则：# 文字 → 正面，其余（## / 列表 / 文字）为背面；或 单行 + 下一行「- 要点」；或 正面↵背面 双行（空格 / 缩进自动忽略）'
+    : '识别规则：1. 题干　A.… B.… C.… D.…　答案：A　解析：…（自动识别单选 / 多选 / 判断）';
   if(!importState.parsed){
     v.innerHTML=`
     <div class="card">
@@ -2474,7 +2451,7 @@ function renderImport(){
         <input type="file" id="fileInput" accept=".txt,.md,.csv,.json,application/json" style="display:none" onchange="onFile(this)">
       </div>
       <div class="muted" style="margin:12px 2px 6px">或直接粘贴文本：</div>
-      <textarea id="pasteArea" placeholder="在此粘贴文本，系统会按下方规则自动识别格式…" oninput="importState.text=this.value">${esc(importState.text)}</textarea>
+      <textarea id="pasteArea" placeholder="${rulesPlaceholder}" oninput="importState.text=this.value">${esc(importState.text)}</textarea>
       <div class="section-title" style="margin:14px 0 10px">AI 识别模式</div>
       <div class="seg">
         <div class="opt ${importState.mode==='cards'?'active':''}" onclick="setMode('cards')">
@@ -2482,7 +2459,6 @@ function renderImport(){
         <div class="opt ${importState.mode==='quiz'?'active':''}" onclick="setMode('quiz')">
           <span class="em">📝</span>优先解析题库刷题<span class="muted" style="font-weight:400;display:block;font-size:12px">考试习题、单选多选判断</span></div>
       </div>
-      ${importState.mode==='cards'?rulesCards:rulesQuiz}
       <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="runParse()">🤖 AI 解析</button>
     </div>`;
   }else{
@@ -2977,6 +2953,14 @@ function renderDetail(){
 }
 function switchTab(_,sub){cur.sub=sub;if(sel.active)sel.ids.clear();document.querySelectorAll('#view-detail .tabs2 .t').forEach(t=>t.classList.remove('active'));
   event.target.classList.add('active');renderDetailSub(sub);}
+/* 点「进入卡片背诵/进入刷题模式」时，同步选中下方「卡片/题目」选择器并切换列表 */
+function syncDetailSub(sub){
+  const tabs=document.querySelectorAll('#view-detail .tabs2 .t');
+  if(!tabs.length)return;                     // 不在详情页时静默跳过
+  cur.sub=sub;if(sel.active)sel.ids.clear();
+  tabs.forEach((t,i)=>t.classList.toggle('active',sub==='cards'?i===0:i===1));
+  renderDetailSub(sub);
+}
 function renderDetailSub(sub){
   const d=getDeck(cur.deckId);const box=document.getElementById('detail-sub');
   if(sub==='cards'){
@@ -3534,8 +3518,9 @@ function dueCardQueue(deck){
   due.sort((a,b)=>(a.nextReview||0)-(b.nextReview||0));
   return due;
 }
-function startStudy(id,cfg){
+async function startStudy(id,cfg){
   cfg=cfg||{scope:'all',tags:null,order:'shuffle',display:'flip'};
+  await maybeSyncPull(true);                 // 进入卡片背诵前，先拉取云端最新卡片列表
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
   saveDeckStudyCfg(id,cfg);                       // 记忆本次背诵设置，下次直接开始即用
   const q=buildStudyQueue(d,cfg);
@@ -3587,6 +3572,7 @@ function studyEmptyMsg(cfg){
 /* ---- 进入卡片背诵前的设置弹窗 ---- */
 function openStudyConfig(id){
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
+  syncDetailSub('cards');                     // 下方「卡片/题目」选择器同步选中「卡片」并展示卡片列表
   window.__bt=null;window.__ct=null;            // 进入前清空其它窗口标志，避免管理标签同步串窗
   const cfg=deckStudyCfg(d);                    // 预填上次记忆的背诵设置，省去重复设置
   window.__sc={id,scope:cfg.scope,tags:cfg.tags,order:cfg.order,display:cfg.display};
@@ -4021,12 +4007,13 @@ function studyPrev(){if(studyState.idx>0){studyState.idx--;studyState.flipped=fa
 
 /* =================== QUIZ =================== */
 let quiz={deckId:null,queue:[],idx:0,mode:'sequential',range:'all',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:true,orders:{}};
-function startQuiz(id,cfg){
+async function startQuiz(id,cfg){
   cfg=cfg||{range:'all',types:null,order:'random',shuffle:defaultShuffle()};
+  await maybeSyncPull(true);                 // 进入刷题前，先拉取云端最新题目列表
   const d=getDeck(id);if(!d.questions||!d.questions.length){toast('没有题目');return;}
   const qs=buildQuizQueue(d,cfg);
   if(!qs.length){toast(rangeEmptyMsg(cfg.range));return;}
-  quiz={deckId:id,queue:qs,idx:0,mode:cfg.order,range:cfg.range,types:cfg.types,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:cfg.shuffle,orders:{}};
+  quiz={deckId:id,queue:qs,idx:0,mode:cfg.order,range:cfg.range,types:cfg.types,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:cfg.shuffle,orders:{},autoNext:(cfg.autoNext!==undefined?cfg.autoNext:(DB.meta.lastQuiz&&DB.meta.lastQuiz.autoNext!==undefined?DB.meta.lastQuiz.autoNext:true))};
   go('quiz');renderQuiz();
 }
 function buildQuizQueue(d,cfg){
@@ -4047,8 +4034,9 @@ function rangeEmptyMsg(range){
 /* ---- 刷题配置面板 ---- */
 function openQuizConfig(id){
   const d=getDeck(id);if(!d.questions||!d.questions.length){toast('没有题目');return;}
+  syncDetailSub('questions');                 // 下方「卡片/题目」选择器同步选中「题目」并展示题目列表
   const last=DB.meta.lastQuiz||{};
-  window.__qc={id,range:last.range||'all',types:(last.types!==undefined?last.types:null),order:last.order||'random',shuffle:(last.shuffle!==undefined?last.shuffle:defaultShuffle())};
+  window.__qc={id,range:last.range||'all',types:(last.types!==undefined?last.types:null),order:last.order||'random',shuffle:(last.shuffle!==undefined?last.shuffle:defaultShuffle()),autoNext:(last.autoNext!==undefined?last.autoNext:true)};
   renderQuizConfig();showModal();
 }
 function qcTypesArr(){const c=window.__qc;return c.types===null?['single','multiple','judge']:c.types;}
@@ -4083,6 +4071,11 @@ function renderQuizConfig(){
         <div class="q ${c.shuffle?'active':''}" onclick="qcSet('shuffle',true)">🎲 开启</div>
         <div class="q ${!c.shuffle?'active':''}" onclick="qcSet('shuffle',false)">关闭</div>
       </div></div>
+    <div class="pv-field"><label>自动下一题 <span class="muted" style="font-weight:400">（提交后自动跳到下一题，无需手动点击）</span></label>
+      <div class="queue-seg">
+        <div class="q ${c.autoNext?'active':''}" onclick="qcSet('autoNext',true)">开启</div>
+        <div class="q ${!c.autoNext?'active':''}" onclick="qcSet('autoNext',false)">手动</div>
+      </div></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="qcStart()">开始刷题</button>
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
@@ -4097,7 +4090,7 @@ function qcType(t,checked){
   c.types=arr;renderQuizConfig();
 }
 function openQuizConfigFromQuiz(){
-  window.__qc={id:quiz.deckId,range:quiz.range||'all',types:quiz.types,order:quiz.mode||'sequential',shuffle:quiz.shuffle,fromQuiz:true};
+  window.__qc={id:quiz.deckId,range:quiz.range||'all',types:quiz.types,order:quiz.mode||'sequential',shuffle:quiz.shuffle,fromQuiz:true,autoNext:(quiz.autoNext!==undefined?quiz.autoNext:true)};
   renderQuizConfig();showModal();
 }
 function qcStart(){
@@ -4106,8 +4099,8 @@ function qcStart(){
   if(types&&types.length===0){toast('请至少选择一种题型');return;}
   hideModal();
   DB.meta.shuffleOptions=c.shuffle;
-  DB.meta.lastQuiz={range:c.range,types,order:c.order,shuffle:c.shuffle};save();
-  quiz.shuffle=c.shuffle;quiz.orders={};
+  DB.meta.lastQuiz={range:c.range,types,order:c.order,shuffle:c.shuffle,autoNext:c.autoNext};save();
+  quiz.shuffle=c.shuffle;quiz.orders={};quiz.autoNext=c.autoNext;
   if(c.fromQuiz){
     const cfg={range:c.range,types,order:c.order,shuffle:c.shuffle};
     if(quiz.global){
@@ -4127,7 +4120,7 @@ function qcStart(){
     }
     quiz.idx=0;quiz.sel=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();return;
   }
-  startQuiz(c.id,{range:c.range,types,order:c.order,shuffle:c.shuffle});
+  startQuiz(c.id,{range:c.range,types,order:c.order,shuffle:c.shuffle,autoNext:c.autoNext});
 }
 function qcReorder(order){
   if(quiz.global){
@@ -4165,12 +4158,11 @@ function renderQuiz(){
       <button class="btn btn-ghost btn-sm" onclick="goBack()">← 退出</button>
       <div class="row" style="gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="openQuizMenu()" title="更多（备忘 / 设置）">⋯ 更多</button>
-        <span class="badge ${TYPE_BADGE[q.type]}">${TYPE_LABEL[q.type]}</span>
       </div>
     </div>
     <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${quiz.idx+1}/${total} 题</span>
       <div class="q-bar"><div style="width:${pct}%"></div></div></div>
-    <div style="margin:6px 0 14px"><div class="q-text selectable" data-store data-store-kind="question" data-store-id="${q.id}" data-store-field="question" style="font-size:16px;font-weight:700;line-height:1.6;display:inline">${toRich(q.question)}</div>${q.guess?' <span class="badge bd-guess" title="曾经蒙对/蒙选过">🎲 蒙题</span>':''}</div>
+    <div class="q-head-row"><span class="badge ${TYPE_BADGE[q.type]}">${TYPE_LABEL[q.type]}</span>${q.guess?' <span class="badge bd-guess" title="曾经蒙对/蒙选过">🎲 蒙题</span>':''}<div class="q-text selectable" data-store data-store-kind="question" data-store-id="${q.id}" data-store-field="question">${toRich(q.question)}</div></div>
     <div id="optWrap">${optHtml}</div>
     ${!quiz.submitted?`<div class="guess-bar ${quiz.guess?'on':''}" onclick="toggleGuess()">
       <span class="gb-box">${quiz.guess?'✓':''}</span>
@@ -4304,6 +4296,11 @@ function submitAnswer(){
       <button class="btn btn-ghost" style="background:var(--primary-light);color:var(--primary-dark)" onclick="toCard('${q.id}')">🃏 转为记忆卡片</button>
       <button class="btn btn-primary" onclick="nextQ()">下一题 →</button>
     </div>`;
+  // 自动下一题：开启时在短暂停留后自动跳转（用 token 防止中途手动翻页后重复跳）
+  if(quiz.autoNext){
+    const token=(quiz._autoTok=(quiz._autoTok||0)+1);
+    setTimeout(()=>{ if(quiz._autoTok===token && quiz.submitted) nextQ(); },450);
+  }
   // remove submit button area already hidden via quiz.submitted
   const sb=document.querySelector('#view-quiz .btn-primary.btn-block');
 }
@@ -4402,32 +4399,6 @@ function streakDates(){
   }
   return set;
 }
-/* 今日目标进度条（首页与规划页共用，含配额缓冲结转） */
-function goalBarsHtml(){
-  const tk=todayKey();
-  const c=DB.meta.cardDays[tk]||0, qz=DB.meta.quizDays[tk]||0;
-  const baseC=todayBase('cards'),baseQ=todayBase('quiz');
-  const bufC=baseC?todayBuffer('cards'):0, bufQ=baseQ?todayBuffer('quiz'):0;   // 未设目标的那项不结转
-  const tgtC=baseC+bufC, tgtQ=baseQ+bufQ;
-  const hasPlan=(DB.meta.plans||[]).length>0;
-  if(tgtC===0&&tgtQ===0)return hasPlan
-    ? `<div class="gr-empty">当前计划只做考试倒计时，没设每日目标 🎯 这样也完全可以；想看进度条，就在「规划」页编辑计划补上每日背卡 / 刷题数量。<br><span class="muted sm">今日已背 ${c} 张 · 已刷 ${qz} 题（不设目标也照常记录）</span></div>`
-    : `<div class="gr-empty">还没有设定备考计划 📝 去「规划」页添加考研 / 期末等目标，这里会显示每日进度。</div>`;
-  const pc=c===0?0:Math.min(100,Math.round(c/Math.max(1,tgtC)*100));
-  const pq=qz===0?0:Math.min(100,Math.round(qz/Math.max(1,tgtQ)*100));
-  const cSub=c>=baseC?`<div class="gr-sub ok">🎉 基础背卡目标已达成（${c}/${baseC}）${bufC?` · 积压剩 ${Math.max(0,bufC-(c-baseC))}`:''}</div>`:`<div class="gr-sub">还差 ${Math.max(0,baseC-c)} 张卡达成基础目标</div>`;
-  const qSub=qz>=baseQ?`<div class="gr-sub ok">🎉 基础刷题目标已达成（${qz}/${baseQ}）${bufQ?` · 积压剩 ${Math.max(0,bufQ-(qz-baseQ))}`:''}</div>`:`<div class="gr-sub">还差 ${Math.max(0,baseQ-qz)} 题达成基础目标</div>`;
-  const bufHint=(bufC||bufQ)?`<div class="gr-buf">📦 含未完成结转：${bufC?`背卡 +${bufC}`:''}${(bufC&&bufQ)?' · ':''}${bufQ?`刷题 +${bufQ}`:''}（已自动分摊到今天，多学即还债）</div>`:'';
-  const rowC=tgtC>0
-    ? `<div class="goal-row"><div class="gr-h"><span>🃏 每日背卡</span><b>${c}/${tgtC}</b>${bufC?`<i class="gr-tag">含结转 ${bufC}</i>`:''}</div>
-      <div class="q-bar"><div style="width:${pc}%"></div></div>${cSub}</div>`
-    : `<div class="goal-row gr-off"><div class="gr-h"><span>🃏 每日背卡</span><b>未设目标</b></div><div class="gr-sub">今日已背 ${c} 张 · 不设目标就只记录、不催进度</div></div>`;
-  const rowQ=tgtQ>0
-    ? `<div class="goal-row"><div class="gr-h"><span>📝 每日刷题</span><b>${qz}/${tgtQ}</b>${bufQ?`<i class="gr-tag">含结转 ${bufQ}</i>`:''}</div>
-      <div class="q-bar"><div style="width:${pq}%"></div></div>${qSub}</div>`
-    : `<div class="goal-row gr-off"><div class="gr-h"><span>📝 每日刷题</span><b>未设目标</b></div><div class="gr-sub">今日已刷 ${qz} 题 · 不设目标就只记录、不催进度</div></div>`;
-  return bufHint+rowC+rowQ;
-}
 /* 首页规划速览卡片 */
 function renderHomePlan(){
   const el=document.getElementById('plan-home');if(!el)return;
@@ -4447,7 +4418,6 @@ function renderHomePlan(){
       <div class="cd-info"><div class="cd-name">设置备考计划</div><div class="cd-date">点此添加考研 / 期末等多套独立目标</div></div>
       <div style="color:var(--text-3);font-size:18px">›</div></div>`;
   }
-  if((todayBase('cards')>0)||(todayBase('quiz')>0))html+=goalBarsHtml();  // 任一套计划设了每日目标才展示进度块
   el.innerHTML=html;
 }
 /* 备考计划区块（规划页，列出全部计划，相互独立） */
@@ -4512,14 +4482,9 @@ function renderPlan(){
   const v=document.getElementById('view-plan');
   if(!v)return;
   const plans=DB.meta.plans||[];
-  const baseC=todayBase('cards'),baseQ=todayBase('quiz');
   const head=plans.length>1?`📅 备考计划（${plans.length} 套）`:`📅 备考计划`;
   v.innerHTML=
-    `<div class="plan-sec"><div class="ph">${head} <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加计划</button></div>${planListHtml()}`+
-      (plans.length?`<div class="plan-sum">${(baseC||baseQ)
-        ?`📊 每日目标合计：${[baseC?`背卡 <b>${baseC}</b> 张`:'',baseQ?`刷题 <b>${baseQ}</b> 题`:''].filter(Boolean).join(' · ')}（多套计划自动累加${(baseC&&baseQ)?'':'；另一项未设置'}）`
-        :`📊 当前只做考试倒计时，未设每日目标（可在计划里随时补上）`}</div>`:'')+`</div>`+
-    `<div class="plan-sec"><div class="ph">🎯 每日目标进度</div>${goalBarsHtml()}</div>`+
+    `<div class="plan-sec"><div class="ph">${head} <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加计划</button></div>${planListHtml()}</div>`+
     `<div class="plan-sec"><div class="ph">📆 学习日历</div>${calendarHtml()}</div>`;
 }
 /* 备考计划增删改（多套独立计划） */
@@ -4535,7 +4500,7 @@ function openPlanModal(id){
       <div class="pv-field"><label>每日背卡目标（张）<span class="muted sm">选填</span></label><input type="number" id="plan-cards" min="0" placeholder="不填 = 不设置" value="${p&&p.cards?p.cards:''}"></div>
       <div class="pv-field"><label>每日刷题目标（题）<span class="muted sm">选填</span></label><input type="number" id="plan-quiz" min="0" placeholder="不填 = 不设置" value="${p&&p.quiz?p.quiz:''}"></div>
     </div>
-    <div class="muted" style="font-size:12px;margin:-4px 0 12px">💡 两项都可留空：只想要考试倒计时就都不填；只背卡不刷题就只填背卡。留空的那项不会出现在「每日目标进度」里。</div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 12px">💡 两项都可留空：只想要考试倒计时就都不填；只背卡不刷题就只填背卡。</div>
     <div class="pv-field"><label>标记颜色</label><div class="plan-colors">${colors.map(c=>`<span class="dot ${p&&p.color===c?'on':''}" style="background:${c}" data-c="${c}" onclick="planPickColor(this)"></span>`).join('')}</div></div>
     <div class="modal-actions">
       ${p?`<button class="btn btn-danger" onclick="delPlan('${p.id}')">删除</button>`:''}
@@ -4715,6 +4680,7 @@ function renderScoreSubject(){
 function scoreSubjectHtml(p,s){
   const st=subjStat(p,s.id), ts=subjTests(p,s.id);
   const chart=scoreLineChart({
+    w:pcWide()?960:320,
     vals:ts.map(t=>({y:+t.score,label:t.date?t.date.slice(5):''})),
     color:p.color||'#6366f1',
     refs:[
@@ -4735,7 +4701,7 @@ function scoreSubjectHtml(p,s){
         <div class="st"><div class="n">${st.max==null?'—':st.max}</div><div class="l">最高</div></div>
         <div class="st"><div class="n">${st.min==null?'—':st.min}</div><div class="l">最低</div></div>
       </div>
-      <div class="score-chart">${chart}</div>
+      <div class="score-chart" onclick="event.stopPropagation()">${chart}</div>
       <div class="sc-more">查看该科目全部记录 →</div>
     </div></div>`;
 }
@@ -4746,7 +4712,7 @@ function scoreTotalHtml(p){
   }
   const data=totalByPaper(p);
   const chart=scoreLineChart({
-    w:340,h:170,
+    w:pcWide()?1000:340,h:170,
     vals:data.map(d=>({y:d.total,label:d.paper})),
     color:'#f59e0b',
     refs:[
@@ -5115,7 +5081,7 @@ function qExtra(q){
   if(q.guessCount)p.push('蒙 '+q.guessCount+' 次');
   return p.join(' · ')||'暂无薄弱信号';
 }
-/* 汇总诊断：最低3章节 / 反复记不住知识点 / 平均星级 */
+/* 汇总诊断：最低3卡组 / 反复记不住知识点 / 平均星级 */
 function diagnosis(){
   const chapters=DB.decks
     .filter(d=>!d.archived && ((d.cards&&d.cards.length)||(d.questions&&d.questions.length)||(d.quiz&&d.quiz.total)))
@@ -5143,7 +5109,7 @@ function renderDiagnosis(){
   autoEnrollWeak(dg);   // 反复记不住的知识点自动钉入考前冲刺清单（即自动加入复习），无需手动点「复习」
   const ov=`<div class="diag-ov">
     <div class="diag-ov-item"><div class="n" style="color:${starColor(Math.round(dg.avgStar))}">${dg.avgStar?stars(Math.round(dg.avgStar)):'—'}</div><div class="l">平均掌握度</div></div>
-    <div class="diag-ov-item"><div class="n">${dg.totalChapters}</div><div class="l">有数据章节</div></div>
+    <div class="diag-ov-item"><div class="n">${dg.totalChapters}</div><div class="l">有数据卡组</div></div>
     <div class="diag-ov-item"><div class="n" style="color:var(--red)">${dg.weakItems.length}</div><div class="l">薄弱知识点</div></div>
     <div class="diag-ov-item"><div class="n">${dg.planCount}</div><div class="l">明日待复习</div></div>
   </div>`;
@@ -5154,7 +5120,7 @@ function renderDiagnosis(){
       <div class="diag-ch-meta">综合掌握 <b>${c.score}%</b> · 背卡 ${c.memAcc==null?'—':c.memAcc+'%'} · 刷题 ${c.quizAcc==null?'—':c.quizAcc+'%'} · 错题 ${c.wrongN} 道</div>
       <div class="q-bar thin"><div style="width:${c.score}%;background:${starColor(sc)}"></div></div>
     </div>`;
-  }).join(''):'<div class="muted">暂无章节数据，去刷题或背卡后这里会显示最薄弱的章节</div>';
+  }).join(''):'<div class="muted">暂无卡组数据，去刷题或背卡后这里会显示最薄弱的卡组</div>';
   const itemSec=dg.weakItems.length?dg.weakItems.map(it=>{
     const sc=starOf(it.score);
     return `<div class="weak-row">
@@ -5167,7 +5133,7 @@ function renderDiagnosis(){
   document.getElementById('view-diagnosis').innerHTML=`<div class="plan-head"><h2>🩺 薄弱知识点诊断</h2>
     <button class="btn btn-ghost btn-sm" onclick="openDiagMenu()">⋯ 更多</button></div>
     ${ov}
-    <div class="diag-section"><h3>🔴 正确率最低的 3 个章节</h3>${chSec}</div>
+    <div class="diag-section"><h3>🔴 正确率最低的 3 个卡组</h3>${chSec}</div>
     <div class="diag-section"><h3>🔵 反复记不住的知识点 Top ${dg.weakItems.length||0}</h3>
       <div class="weak-list">${itemSec}</div></div>
     <div class="diag-section" id="diag-sprint"><h3>🔥 考前冲刺清单 <span class="muted sm">近 5 天记不熟的卡片</span></h3>
@@ -5176,8 +5142,7 @@ function renderDiagnosis(){
         <button class="btn btn-outline" onclick="sprintQuiz()">✍️ 一键刷题</button>
       </div>
       ${sprintHtml()}
-    </div>
-    <div class="muted" style="margin-top:14px;line-height:1.8">⭐ 星级越少越该优先攻克；弱项会由系统自动钉入冲刺清单并安排复习，反复出错的也会自动入列、记住后自动移出。掌握度由多次背诵与答题正确率自动计算（1–5 星）。</div>`;
+    </div>`;
 }
 function exportDiagnosis(){
   const dg=diagnosis();const date=new Date().toISOString().slice(0,10);
@@ -5186,23 +5151,23 @@ function exportDiagnosis(){
   L.push('> 生成时间：'+date+'（由「学习卡片」App 自动汇总）');L.push('');
   L.push('## 总体掌握');
   L.push('- 平均掌握度：'+(dg.avgStar?stars(Math.round(dg.avgStar))+'（'+dg.avgStar+' 星）':'—'));
-  L.push('- 有数据章节：'+dg.totalChapters+' 个');
+  L.push('- 有数据卡组：'+dg.totalChapters+' 个');
   L.push('- 薄弱知识点：'+dg.weakItems.length+' 个');
   L.push('- 明日已安排复习：'+dg.planCount+' 个');L.push('');
-  L.push('## 一、正确率最低的 3 个章节');
+  L.push('## 一、正确率最低的 3 个卡组');
   if(dg.weakest.length)dg.weakest.forEach((c,i)=>{
     L.push((i+1)+'. **'+c.name+'** — 综合掌握 '+c.score+'%（背卡 '+(c.memAcc==null?'—':c.memAcc+'%')+' / 刷题 '+(c.quizAcc==null?'—':c.quizAcc+'%')+'）· 错题 '+c.wrongN+' 道');
   });else   L.push('（暂无数据）');L.push('');
   L.push('## 二、反复记不住的知识点 Top '+(dg.weakItems.length||0));
   if(dg.weakItems.length){
-    L.push('');L.push('| 类型 | 知识点 | 所属章节 | 掌握分 | 薄弱信号 |');
+    L.push('');L.push('| 类型 | 知识点 | 所属卡组 | 掌握分 | 薄弱信号 |');
     L.push('| --- | --- | --- | --- | --- |');
     dg.weakItems.forEach(it=>{
       L.push('| '+(it.kind==='card'?'卡片':'题目')+' | '+it.title.replace(/\|/g,'/')+' | '+it.deck+' | '+it.score+' | '+it.extra.replace(/\|/g,'/')+' |');
     });
   }else L.push('（暂无数据）');L.push('');
   L.push('## 三、次日复习建议');
-  L.push('- 已选 '+dg.planCount+' 个薄弱点安排到「开始今日复习」，优先攻克最低分章节。');
+  L.push('- 已选 '+dg.planCount+' 个薄弱点安排到「开始今日复习」，优先攻克最低分卡组。');
   L.push('- 反复记不住的卡片优先背（间隔重复箱低、被标记遗忘/困难）。');
   const md=L.join('\n');
   window.__diagMd=md;
