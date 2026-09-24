@@ -206,7 +206,6 @@
   .guess-bar.on .gb-box{background:var(--orange);border-color:var(--orange)}
   .guess-bar .gb-tx{display:flex;flex-direction:column;line-height:1.45}
   .guess-bar .gb-tx b{font-size:14px;color:#92400e}
-  .guess-bar .gb-tx i{font-style:normal;font-size:11px;color:#b45309;opacity:.85}
   .badge.bd-guess{background:#fef3c7;color:#b45309}
   .q-result.lucky{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
   .q-result.lucky .lk-sub{font-weight:600;font-size:12px;opacity:.85;margin-top:3px}
@@ -221,6 +220,8 @@
   .li .lt .b{font-size:12px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .li .lt .a-line{display:flex;align-items:center;gap:6px}
   .li .lt .a-line .a{flex:1;min-width:0}
+  /* 卡片列表：标签徽章并入题干行右侧（与口诀/链接图标同行），垂直居中、不收缩换行 */
+  .li .lt .a-line .tag-row{flex-shrink:0;margin-top:0}
   .li-badges{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;flex-wrap:wrap}
   .li .lt img{height:18px;width:auto;vertical-align:-4px;border-radius:3px;margin:0 3px;display:inline-block}
   .li .lt br{display:none}
@@ -248,6 +249,17 @@
   .nav-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
   .nav-row .btn{flex:1;justify-content:center}
   .nav-row .nav-mid{flex:0 0 auto;min-width:72px;text-align:center;font-size:13px;color:var(--text-3);font-weight:700}
+  /* 背诵 / 刷题内联标签条：独立小条，置于卡片下方，不撑大、不遮挡文字 */
+  .tagbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 2px;padding:7px 9px;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px}
+  .tagbar-lb{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-3);margin-right:2px;white-space:nowrap}
+  .tg-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;
+    border:1px solid var(--border);background:#fff;color:var(--text-2);cursor:pointer;
+    font-size:12px;line-height:1.4;user-select:none;transition:.12s;white-space:nowrap}
+  .tg-chip input{position:absolute;opacity:0;width:0;height:0;margin:0;pointer-events:none}
+  .tg-chip:hover{border-color:var(--primary)}
+  .tg-chip.on{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600}
+  .tg-chip .x{font-size:10px;opacity:.6}
   /* 分栏对照模式：PC / 平板大屏左右分屏，手机竖屏上下堆叠 */
   .split-card{display:flex;gap:14px;align-items:stretch;margin-top:4px}
   .split-pane{flex:1;min-width:0;background:#fff;border-radius:14px;padding:20px 16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column}
@@ -313,7 +325,6 @@
   .q-done{display:flex;align-items:center;gap:12px;margin-bottom:12px}
   .q-bar.thin{height:5px}
   .q-bar.thin>div{background:var(--green)}
-  .q-foot{font-size:11px;color:var(--text-3);text-align:center;line-height:1.6;margin-top:8px}
   .opt{display:flex;align-items:center;gap:12px;padding:13px 15px;border:2px solid var(--border);border-radius:var(--radius-s);
        cursor:pointer;margin-bottom:10px;font-size:15px;transition:.12s;background:#fff}
   .opt:hover{border-color:var(--primary)}
@@ -354,6 +365,7 @@
   .badge-s{background:var(--green-light);color:var(--green-dark)}
   .badge-m{background:var(--orange-light);color:#b45309}
   .badge-j{background:#ede9fe;color:#7c3aed}
+  .badge-i{background:#e0f2fe;color:#0369a1}
   .badge-disp{background:var(--primary-light);color:var(--primary-dark)}
   .badge-w{background:var(--red-light);color:var(--red)}
   .bar-row{margin-bottom:10px}
@@ -438,7 +450,10 @@
   .sheet-cancel{margin-top:8px;color:var(--text-2)}
   /* PC 端：底部长条菜单改为居中紧凑弹窗，功能选项横向排布（卡片式网格），点弹窗外关闭 */
   @media (min-width:681px){
-    .sheet-mask{background:rgba(15,23,42,.35);backdrop-filter:blur(2px)}
+    .sheet-mask{background:rgba(15,23,42,.35)}
+    /* 模糊仅在遮罩显示时启用：常驻的全屏 backdrop-filter 会让 PC 每次视图切换（含退出背诵的 fade 动画每帧）
+       都重做一次全屏模糊采样，合成线程被拖住即表现为鼠标卡顿 */
+    .sheet-mask.show{backdrop-filter:blur(2px)}
     .sheet{left:50%;right:auto;bottom:auto;top:50%;width:auto;max-width:min(560px,92vw);
       max-height:84vh;overflow-y:auto;padding:18px 18px 16px;border-radius:18px;
       box-shadow:0 24px 60px rgba(15,23,42,.28);transform:translate(-50%,-50%) scale(.96);opacity:0;
@@ -1073,12 +1088,14 @@ function loadDB(){
     d.meta.tags=d.meta.tags||[];                     // 自定义卡片标签（空则用默认种子）
     migratePlans(d);                                 // 旧 exams/goals → plans 一次性迁移
     // 蒙题字段兼容旧数据
-    d.decks.forEach(dk=>{ if(dk.cycle===undefined)dk.cycle='standard'; (dk.questions||[]).forEach(q=>{
+    d.decks.forEach(dk=>{ if(dk.cycle===undefined)dk.cycle='standard';     (dk.questions||[]).forEach(q=>{
       if(q.guess===undefined)q.guess=false;
       if(q.guessCount===undefined)q.guessCount=0;
       if(q.guessRight===undefined)q.guessRight=0;
+      if(q.tags===undefined)q.tags=[];                 // 刷题内联标签
     });
     (dk.cards||[]).forEach(c=>{ if(c.links===undefined)c.links=[]; if(c.note===undefined)c.note=''; if(c.ext===undefined)c.ext=''; });});
+    migrateDeckTags(d);
     return d;
   }
   return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},reviewSession:null,plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
@@ -1087,6 +1104,13 @@ function loadDB(){
    每个旧 exam → 一套「只有倒计时、不设每日目标」的计划（目标可不填，避免多套考试把目标累加翻倍）；
    旧 goals 里真实填过的数字 → 单独一套「通用每日目标」（无日期）承载。
    迁移完成后清空旧字段，避免下次加载重复迁移。 */
+/* 标签改为「每个卡组独立管理」：旧版本是一套全局标签（DB.meta.tags），
+   这里一次性把它复制给还没有自己标签的卡组作为初始标签；此后各卡组各自增删互不干扰。 */
+function migrateDeckTags(d){
+  const g=(d.meta&&d.meta.tags&&d.meta.tags.length)?d.meta.tags:null;
+  if(!g)return;
+  d.decks.forEach(dk=>{ if(!dk.tags||!dk.tags.length)dk.tags=g.map(t=>({key:t.key,icon:t.icon,label:t.label})); });
+}
 const PLAN_COLORS=['#6366f1','#0ea5e9','#f59e0b','#10b981','#ef4444','#8b5cf6'];
 function migratePlans(d){
   const m=d.meta;
@@ -1596,7 +1620,7 @@ function syncStatus(s){const e=document.getElementById('sy-status');if(e)e.textC
 function showModal(){document.getElementById('modal').classList.add('show');}
 function hideModal(){document.getElementById('modal').classList.remove('show');}
 function showModal2(){document.getElementById('modal2').classList.add('show');}
-function hideModal2(){document.getElementById('modal2').classList.remove('show');}
+function hideModal2(){document.getElementById('modal2').classList.remove('show');window.__tagEdit=null;}  /* 关闭即丢弃标签编辑副本（= 取消） */
 document.addEventListener('keydown',e=>{                       // ESC 优先关顶层弹窗（二级→一级）
   if(e.key!=='Escape')return;
   const m2=document.getElementById('modal2');
@@ -2064,34 +2088,50 @@ function setCardUrgent(id,cid){
   c.nextReview=now();save();openEditCard(id,cid);toast('已加急到今天重背');
 }
 
-const TYPE_LABEL={single:'单选',multiple:'多选',judge:'判断'};
-const TYPE_BADGE={single:'badge-s',multiple:'badge-m',judge:'badge-j'};
+const TYPE_LABEL={single:'单选',multiple:'多选',judge:'判断',indef:'不定项'};
+const TYPE_BADGE={single:'badge-s',multiple:'badge-m',judge:'badge-j',indef:'badge-i'};
 /* 卡片背诵「默写方式」标签 */
 const DISP_LABEL={flip:'翻面',occlude:'遮挡',self:'自检'};
 const DISP_BADGE={flip:'badge-disp',occlude:'badge-disp',self:'badge-disp'};
 /* 卡片标签 / 重难点分级 */
-/* 卡片标签：可自定义（增 / 改名 / 改图标 / 删除）。默认种子写入 DB.meta.tags 持久化，
-   卡片 / 批量标签 / 背诵设置 全部读同一来源，标签改名后各处自动同步。 */
+/* 卡片标签：可自定义（增 / 改名 / 改图标 / 删除），且【每个卡组独立管理】——
+   各卡组有自己的一份标签字典（deck.tags），改 A 卡组的标签不会影响 B 卡组，
+   背诵设置 / 卡片标签 / 批量标签都只取当前卡组这一份。未自定义的卡组使用下面的系统默认种子。 */
 const DEFAULT_TAGS=[
   {key:'freq',   icon:'⭐', label:'高频考点'},
   {key:'confuse',icon:'⚠', label:'易混淆'},
   {key:'big',    icon:'🔴', label:'必背大题'},
   {key:'choice', icon:'🟡', label:'选择考点'}
 ];
-let CARD_TAGS=(DB.meta&&DB.meta.tags&&DB.meta.tags.length)?DB.meta.tags:DEFAULT_TAGS.slice();
-function syncTags(){DB.meta.tags=CARD_TAGS.slice();}
-function tagMeta(key){return CARD_TAGS.find(t=>t.key===key)||{key,icon:'🏷',label:key};}
+function defTags(){return DEFAULT_TAGS.map(t=>({key:t.key,icon:t.icon,label:t.label}));}
+/* 取某卡组的标签集：未自定义则回落到系统默认种子（不写库，等用户真正修改时才落） */
+function deckTags(id){
+  const d=getDeck(id);
+  if(d&&d.tags&&d.tags.length)return d.tags;
+  return defTags();
+}
+function setDeckTags(id,list){const d=getDeck(id);if(!d)return;d.tags=list;}
+function tagMeta(key,deckId){return deckTags(deckId).find(t=>t.key===key)||{key,icon:'🏷',label:key};}
 /* ---- 标签自定义管理 ---- */
-function openTagManager(){renderTagManager();showModal2();}
+/* 编辑副本：打开管理弹窗后，改名 / 改图标 / 新增 / 删除只改副本，点「保存」才落库生效；
+   点「取消」（或 ESC / 点遮罩关闭）则放弃本次全部修改，方便反悔。 */
+function tagEdit(){return window.__tagEdit||deckTags(window.__tagDeckId);}
+function tagEditChanged(){return !!window.__tagEdit&&JSON.stringify(window.__tagEdit)!==JSON.stringify(deckTags(window.__tagDeckId));}
+function openTagManager(id){
+  window.__tagDeckId=id||cur.deckId;                 // 标签按卡组独立：记下当前管理的是哪个卡组
+  window.__tagEdit=deckTags(window.__tagDeckId).map(t=>({key:t.key,icon:t.icon,label:t.label}));
+  renderTagManager();showModal2();
+}
 function renderTagManager(){
-  const rows=CARD_TAGS.map(t=>`<div class="tag-row">
+  const rows=tagEdit().map(t=>`<div class="tag-row">
     <input class="inp tag-ic" value="${esc(t.icon)}" maxlength="2" style="width:46px;text-align:center" onchange="tagField('${t.key}','icon',this.value)">
     <input class="inp tag-lb" value="${esc(t.label)}" onchange="tagField('${t.key}','label',this.value)">
     <button class="btn btn-danger btn-xs" type="button" onclick="tagDel('${t.key}')" title="删除标签">🗑</button>
   </div>`).join('');
+  const d=getDeck(window.__tagDeckId);const nm=d?esc(d.name):'当前卡组';
   document.getElementById('modal2-body').innerHTML=`
-    <div class="modal-title">🏷 自定义标签</div>
-    <p class="muted" style="margin:2px 0 10px">标签用于卡片分类与背诵筛选。改名 / 改图标会<b>同步</b>到所有已标记的卡片与背诵设置；删除会一并移除卡片上的该标签。</p>
+    <div class="modal-title">🏷 自定义标签 · ${nm}</div>
+    <p class="muted" style="margin:2px 0 10px">每个卡组的标签<b>相互独立</b>，这里只管理「${nm}」。改名 / 改图标同步到本卡组已标记的卡片与背诵设置；删除会从本卡组卡片上一并移除。<b>点「保存」后才生效，点「取消」可放弃本次全部修改。</b></p>
     <div class="tag-rows">${rows||'<div class="muted">还没有标签</div>'}</div>
     <div class="pv-field" style="margin-top:12px"><label>新增标签</label>
       <div class="row" style="gap:8px">
@@ -2100,42 +2140,59 @@ function renderTagManager(){
         <button class="btn btn-primary btn-sm" type="button" onclick="tagAdd()">＋ 添加</button>
       </div>
     </div>
-    <div class="modal-actions"><button class="btn btn-primary" onclick="hideModal2()">完成</button></div>`;
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cancelTagEdit()">取消</button>
+      <button class="btn btn-primary" onclick="saveTagEdit()">保存</button>
+    </div>`;
 }
 function tagField(key,field,val){
-  const t=CARD_TAGS.find(x=>x.key===key);if(!t)return;
-  t[field]=val;syncTags();save();
-  if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
-  if(window.__sc)renderStudyConfig();
-  if(window.__ct)renderCardTags();
-  if(window.__bt)renderBatchTagModal();
-  renderTagManager();
+  /* 只认编辑副本：弹窗已关闭（副本被丢弃）时直接忽略，
+     否则 ESC 关闭后输入框补发的 change 会误改到正式标签库 */
+  const list=window.__tagEdit;if(!list)return;
+  const t=list.find(x=>x.key===key);if(!t)return;
+  t[field]=val;                                   // 只改副本，落库交给「保存」
 }
 function tagAdd(){
+  const list=window.__tagEdit;if(!list)return;
   const ic=document.getElementById('tag-new-ic'),lb=document.getElementById('tag-new-lb');
   if(!lb)return;const label=lb.value.trim();if(!label){toast('请输入标签名');return;}
   const icon=ic?ic.value.trim()||'🏷':'🏷';
-  CARD_TAGS.push({key:'t'+Date.now().toString(36),icon,label});syncTags();save();
-  renderTagManager();toast('已添加标签');
-  if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
-  if(window.__sc)renderStudyConfig();
-  if(window.__ct)renderCardTags();
-  if(window.__bt)renderBatchTagModal();
+  list.push({key:'t'+Date.now().toString(36),icon,label});
+  renderTagManager();toast('已添加，点「保存」后生效');
 }
 function tagDel(key){
-  if(CARD_TAGS.length<=1){toast('至少保留一个标签');return;}
-  if(!confirm('删除该标签？所有卡片上对应的标签也会一并移除。'))return;
-  CARD_TAGS=CARD_TAGS.filter(t=>t.key!==key);syncTags();
-  DB.decks.forEach(d=>(d.cards||[]).forEach(c=>{if(c.tags)c.tags=c.tags.filter(x=>x!==key);}));
-  if(window.__ct&&window.__ct.tags)window.__ct.tags=window.__ct.tags.filter(x=>x!==key);   // 同步清掉编辑副本中的失效标签
-  if(window.__bt&&window.__bt.tags)window.__bt.tags=window.__bt.tags.filter(x=>x!==key);
-  if(window.__sc&&window.__sc.tags)window.__sc.tags=window.__sc.tags.filter(x=>x!==key);
-  save();renderTagManager();
+  const list=window.__tagEdit;if(!list)return;
+  if(list.length<=1){toast('至少保留一个标签');return;}
+  window.__tagEdit=list.filter(t=>t.key!==key);
+  renderTagManager();
+  toast('已移出列表；点「保存」生效，点「取消」可反悔');   // 可反悔，故不再这里二次确认，保存时统一确认一次
+}
+/* 保存：把副本写回「当前卡组」的标签集，并清理被删标签在本卡组卡片 / 各编辑窗口中的残留 */
+function saveTagEdit(){
+  const deckId=window.__tagDeckId;
+  const ed=(window.__tagEdit||deckTags(deckId)).map(t=>({key:t.key,icon:t.icon,label:t.label}));
+  const removed=deckTags(deckId).filter(t=>!ed.some(x=>x.key===t.key)).map(t=>t.key);
+  if(removed.length&&!confirm('将删除 '+removed.length+' 个标签，本卡组内卡片上的这些标签也会移除。确定保存？'))return;
+  if(removed.length){
+    const d=getDeck(deckId);                                   // 只清理本卡组，其他卡组不受影响
+    if(d)(d.cards||[]).forEach(c=>{if(c.tags)c.tags=c.tags.filter(x=>!removed.includes(x));});
+    if(window.__ct&&window.__ct.tags)window.__ct.tags=window.__ct.tags.filter(x=>!removed.includes(x));
+    if(window.__bt&&window.__bt.tags)window.__bt.tags=window.__bt.tags.filter(x=>!removed.includes(x));
+    if(window.__sc&&window.__sc.tags)window.__sc.tags=window.__sc.tags.filter(x=>!removed.includes(x));
+  }
+  setDeckTags(deckId,ed);save();
+  window.__tagEdit=null;hideModal2();
   if(cur.deckId&&document.getElementById('view-detail'))renderDetail();
   if(window.__sc)renderStudyConfig();
   if(window.__ct)renderCardTags();
   if(window.__bt)renderBatchTagModal();
-  toast('已删除标签');
+  toast('标签已保存');
+}
+/* 取消：丢弃副本，本次所有改动都不生效 */
+function cancelTagEdit(){
+  const changed=tagEditChanged();
+  window.__tagEdit=null;hideModal2();
+  if(changed)toast('已放弃本次标签修改');
 }
 
 /* =================== ROUTER =================== */
@@ -2146,7 +2203,10 @@ const viewScroll={};                             // 每个视图离开时保存�
 function activeView(){const a=document.querySelector('.view.active');return a&&a.id?a.id.replace('view-',''):null;}
 function go(view,record=true){
   const leaving=activeView();
-  if(leaving==='study'||leaving==='quiz')saveReviewSession(); // 离开复习/刷题页时持久化进度，便于续练
+  if(leaving==='study'||leaving==='quiz'){
+    /* 进度持久化延后一帧：数据多时整库序列化要几十毫秒，同步执行会把退出动画首帧和鼠标响应一起拖住 */
+    setTimeout(saveReviewSession,0);
+  }
   if(leaving)viewScroll[leaving]=window.scrollY||document.documentElement.scrollTop||0;  // 离开前保存当前滚动位置（文档滚动）
   if(record){const cur=activeView();if(cur&&cur!==view){navStack.push(cur);if(navStack.length>30)navStack.shift();}}
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -2273,7 +2333,6 @@ function deckCardHtml(d){
       <div class="mt">${d.cards?d.cards.length:0} 卡片 · ${d.questions?d.questions.length:0} 题目
         ${d.questions&&d.questions.some(q=>q.inWrongBook)?'· <span style="color:var(--red)">'+d.questions.filter(q=>q.inWrongBook).length+' 错题</span>':''}</div>
       ${doneBarHtml(d)}
-      ${deckTagStats(d).map(s=>`<span class="tag tag-tg" title="${s.label} 剩余待背 ${s.due}/${s.total}">${s.icon} ${s.due}</span>`).join('')}
     </div>
     <div style="color:var(--text-3);font-size:20px">›</div>
   </div>`;
@@ -2322,15 +2381,6 @@ function doneBarHtml(d,prefix){
   return `<div class="q-done"><span class="muted">${prefix||'📊 整体学习进度'} ${done}/${total} · ${pct}%</span>
     <div class="q-bar thin"><div style="width:${pct}%;background:var(--green)"></div></div></div>`;
 }
-function deckTagStats(d){
-  const cards=d.cards||[];
-  return CARD_TAGS.map(t=>{
-    const tagged=cards.filter(c=>(c.tags||[]).includes(t.key));
-    const total=tagged.length;
-    const due=tagged.filter(c=>(c.nextReview||0)<=now()).length;
-    return {key:t.key,icon:t.icon,label:t.label,total,due};
-  }).filter(s=>s.total>0);
-}
 /* =================== 复习会话持久化（开始复习今日：退出可续练） =================== */
 /* 把当前「开始复习今日」进度存盘：卡片阶段存 studyState，错题阶段存 quiz */
 function saveReviewSession(){
@@ -2340,7 +2390,7 @@ function saveReviewSession(){
       deckId:st.deckId, queueIds:st.queue.map(c=>({id:c.id})), idx:st.idx,
       flipped:!!st.flipped, mode:st.mode, scope:st.scope, order:st.order, global:st.global,
       display:st.display, reveal:st.reveal||0, selfAns:st.selfAns||'', selfRes:st.selfRes||null, noteOpen:!!st.noteOpen,
-      afterWrongIds:(st.afterWrong||[]).map(q=>({id:q.id}))}};
+      afterWrongIds:(st.afterWrong||[]).map(q=>({id:q.id})), gradedMap:st.gradedMap||{}}};
     save();return;
   }
   if(quiz && quiz.review && quiz.queue && quiz.queue.length){
@@ -2362,7 +2412,7 @@ function resumeReviewSession(){
     if(!q.length){DB.meta.reviewSession=null;save();return false;}
     const aw=(st.afterWrongIds||[]).map(o=>findQuestion(o.id)).filter(Boolean);
     studyState={deckId:st.deckId,queue:q,idx:Math.min(Math.max(st.idx,0),q.length),flipped:st.flipped,mode:st.mode,scope:st.scope,order:st.order,global:st.global,
-      afterWrong:aw,display:st.display,reveal:st.reveal,selfAns:st.selfAns,selfRes:st.selfRes,noteOpen:st.noteOpen,review:true};
+      afterWrong:aw,display:st.display,reveal:st.reveal,selfAns:st.selfAns,selfRes:st.selfRes,noteOpen:st.noteOpen,review:true,gradedMap:st.gradedMap||{}};
     go('study');renderStudy();return true;
   }
   if(rs.phase==='quiz'){
@@ -2382,7 +2432,7 @@ function clearReviewSession(){
 }
 function reviewRemaining(){
   const rs=DB.meta.reviewSession;if(!rs||!rs.active)return 0;
-  if(rs.phase==='study'){const st=rs.study;return Math.max(0,(st.queueIds||[]).length-st.idx)+((st.afterWrongIds||[]).length||0);}
+  if(rs.phase==='study'){const st=rs.study;const gm=st.gradedMap||{};let rem=0;(st.queueIds||[]).forEach(o=>{rem+= (o.id in gm)?GRADE_WEIGHT[gm[o.id]]:1;});return Math.max(0,rem)+((st.afterWrongIds||[]).length||0);}
   if(rs.phase==='quiz'){const qz=rs.quiz;return Math.max(0,(qz.queueIds||[]).length-qz.idx);}
   return 0;
 }
@@ -2407,7 +2457,7 @@ function startToday(){
   updateStreak();
   if(dueCards.length){
     // 先背全部到期卡，背完再刷全部错题
-    studyState={deckId:'__all__',queue:dueCards,idx:0,flipped:false,mode:'due',scope:'due',order:'seq',global:true,afterWrong:wrongQs,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false,review:true};
+    studyState={deckId:'__all__',queue:dueCards,idx:0,flipped:false,mode:'due',scope:'due',order:'seq',global:true,afterWrong:wrongQs,display:'flip',gradedMap:{},reveal:0,selfAns:'',selfRes:null,noteOpen:false,review:true};
     saveReviewSession();
     if(planN)toast('已优先加入 '+planN+' 个薄弱点复习 ✅');
     go('study');renderStudy();
@@ -2672,7 +2722,7 @@ function renderPreview(){
         <div class="pv-h"><span class="muted">#${i+1}</span>
           <div class="row" style="gap:6px">
             <select onchange="editQ(${i},'type',null,this.value)">
-              ${['single','multiple','judge'].map(t=>`<option value="${t}" ${q.type===t?'selected':''}>${TYPE_LABEL[t]}</option>`).join('')}
+              ${['single','multiple','indef','judge'].map(t=>`<option value="${t}" ${q.type===t?'selected':''}>${TYPE_LABEL[t]}</option>`).join('')}
             </select>
             <button class="btn btn-danger btn-sm" onclick="delQ(${i})">🗑</button>
           </div></div>
@@ -2929,7 +2979,6 @@ function renderDetail(){
         <span class="tag" style="background:#f0f9ff;color:#0369a1">${(CYCLES[d.cycle]||CYCLES.standard).name}</span>
       </div>
       ${doneBarHtml(d,'📊 整体学习进度')}
-      ${deckTagStats(d).length?`<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">${deckTagStats(d).map(s=>`<span class="tag tag-tg" title="${s.label} 剩余待背 ${s.due}/${s.total}">${s.icon} ${s.label} · 待背 ${s.due}</span>`).join('')}</div>`:''}
     </div>
 
     <div class="mode-cards">
@@ -2983,7 +3032,7 @@ function renderDetailSub(sub){
       const on=sel.ids.has(c.id);const ec=isCardEmpty(c)?' empty-card':'';
       const cb=sel.active?`<label class="card-check"><input type="checkbox" ${on?'checked':''} onchange="toggleCardSel('${c.id}',this.checked)"></label>`:'';
       const acts=sel.active?'':`<div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openItemMenu('card','${d.id}','${c.id}')" title="更多操作">⋯</button></div>`;
-      return `<div class="li${on?' sel':''}${ec}" data-card-id="${c.id}" onclick="studyCardFromList(event,'${d.id}','${c.id}')">${cb}<div class="lt"><div class="a-line"><div class="a selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="front">${toRich(face(c))}</div><span class="li-badges">${listExtrasHtml(c)}</span></div><div class="b selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="back">${toRich(back(c))}</div>${tagBadges(c)}</div>${acts}</div>`;
+      return `<div class="li${on?' sel':''}${ec}" data-card-id="${c.id}" onclick="studyCardFromList(event,'${d.id}','${c.id}')">${cb}<div class="lt"><div class="a-line"><div class="a selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="front">${toRich(face(c))}</div>${tagBadges(c,d.id)}<span class="li-badges">${listExtrasHtml(c)}</span></div><div class="b selectable" data-store data-store-kind="card" data-store-id="${c.id}" data-store-field="back">${toRich(back(c))}</div></div>${acts}</div>`;
     }).join('');
   }else if(sub==='questions'){
     if(!d.questions.length){box.innerHTML=`<div class="empty"><div class="em">📝</div>暂无题目
@@ -3088,10 +3137,10 @@ function resetDone(id){
   if(!confirm('重置该卡组所有题目的「已做」状态？重置后可重新刷一遍。'))return;
   const d=getDeck(id);const before=JSON.parse(JSON.stringify(d.questions||[]));(d.questions||[]).forEach(q=>q.done=false);save();pushDeckUndo(id,'重置已做','questions',before);renderDetail();toast('已重置已做状态');
 }
-function tagBadges(c){
+function tagBadges(c,deckId){
   const ts=c.tags||[];
   if(!ts.length)return '';
-  return `<div class="tag-row">${ts.map(k=>{const t=tagMeta(k);return `<span class="tag tag-tg" title="${t.label}">${t.icon}</span>`;}).join('')}</div>`;
+  return `<div class="tag-row">${ts.map(k=>{const t=tagMeta(k,deckId);return `<span class="tag tag-tg" title="${t.label}">${t.icon}</span>`;}).join('')}</div>`;
 }
 /* ---- 卡片批量操作 ---- */
 function selToggle(){sel.active=!sel.active;if(!sel.active)sel.ids.clear();renderDetail();}
@@ -3139,12 +3188,12 @@ function batchTag(){
 function renderBatchTagModal(){
   const ops=[['add','添加标签'],['replace','替换为'],['remove','移除标签']];
   const opHtml=ops.map(([v,l])=>`<label class="qe-opt"><input type="radio" name="btop" ${window.__bt.op===v?'checked':''} onchange="btOp('${v}')"> ${l}</label>`).join('');
-  const tagHtml=CARD_TAGS.map(t=>`<label class="qe-opt"><input type="checkbox" ${window.__bt.tags.includes(t.key)?'checked':''} onchange="btTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
+  const tagHtml=deckTags(cur.deckId).map(t=>`<label class="qe-opt"><input type="checkbox" ${window.__bt.tags.includes(t.key)?'checked':''} onchange="btTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
   document.getElementById('modal-body').innerHTML=`<div class="modal-title">🏷 批量修改标签</div>
     <p class="muted" style="margin:4px 0 10px">对选中的 ${sel.ids.size} 张卡片执行：</p>
     <div style="margin-bottom:10px">${opHtml}</div>
     <div style="margin-bottom:14px">${tagHtml}</div>
-    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-bottom:12px">🏷 管理标签</button>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager(cur.deckId)" style="margin-bottom:12px">🏷 管理标签</button>
     <div class="row" style="gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
       <button class="btn btn-primary" onclick="btApply()">应用</button>
@@ -3293,11 +3342,11 @@ function openCardTags(id,cid){
 }
 function renderCardTags(){
   const c=window.__ct;
-  const chips=CARD_TAGS.map(t=>`<label class="qe-opt"><input type="checkbox" ${(c.tags||[]).includes(t.key)?'checked':''} onchange="ctTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
+  const chips=deckTags(window.__ct.id).map(t=>`<label class="qe-opt"><input type="checkbox" ${(c.tags||[]).includes(t.key)?'checked':''} onchange="ctTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">🏷 卡片标签</div>
     <div class="pv-field"><label>选择标签（可多选）</label>${chips}</div>
-    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-top:-4px">🏷 管理标签</button>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager(window.__ct.id)" style="margin-top:-4px">🏷 管理标签</button>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="ctSave()">保存</button>
       <button class="btn btn-ghost" onclick="hideModal()">取消</button>
@@ -3392,6 +3441,7 @@ function openEditQuestion(id,qid){
       <select id="qe-type" onchange="qeRefresh('${id}','${qid}')">
         <option value="single" ${q.type==='single'?'selected':''}>单选</option>
         <option value="multiple" ${q.type==='multiple'?'selected':''}>多选</option>
+        <option value="indef" ${q.type==='indef'?'selected':''}>不定项</option>
         <option value="judge" ${q.type==='judge'?'selected':''}>判断</option>
       </select></div>
     <div class="pv-field"><label>题干</label><textarea id="qe-question" rows="3">${esc(q.question)}</textarea></div>
@@ -3435,7 +3485,7 @@ function saveQuestionEdit(id,qid){
   if(type==='judge'){answer=document.getElementById('qe-answer-sel')?document.getElementById('qe-answer-sel').value:'正确';}
   else{
     const sel=Array.from(document.querySelectorAll('#qe-answer input[name="qe-ans"]:checked')).map(e=>e.value);
-    answer=type==='multiple'?sel.sort().join(''):(sel[0]||'');
+    answer=(type==='multiple'||type==='indef')?sel.sort().join(''):(sel[0]||'');
   }
   if(!question){toast('题干不能为空');return;}
   if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
@@ -3454,6 +3504,7 @@ function openNewQuestion(id){
       <select id="qe-type" onchange="qeRefresh()">
         <option value="single" selected>单选</option>
         <option value="multiple">多选</option>
+        <option value="indef">不定项</option>
         <option value="judge">判断</option>
       </select></div>
     <div class="pv-field"><label>题干</label><textarea id="qe-question" rows="3" placeholder="把题目写在这里…"></textarea></div>
@@ -3477,7 +3528,7 @@ function saveNewQuestion(id,again){
   if(type==='judge'){answer=document.getElementById('qe-answer-sel')?document.getElementById('qe-answer-sel').value:'正确';}
   else{
     const picked=Array.from(document.querySelectorAll('#qe-answer input[name="qe-ans"]:checked')).map(e=>e.value);
-    answer=type==='multiple'?picked.sort().join(''):(picked[0]||'');
+    answer=(type==='multiple'||type==='indef')?picked.sort().join(''):(picked[0]||'');
   }
   if(!question){toast('题干不能为空');return;}
   if(type!=='judge' && (!optLines.length||!answer)){toast('请填写选项并选择答案');return;}
@@ -3529,7 +3580,7 @@ async function startStudy(id,cfg){
     if(empties&&empties===total){toast('已自动隐藏 '+empties+' 张空白卡，暂无可背卡片');return;}
     toast(studyEmptyMsg(cfg));return;
   }
-  studyState={deckId:id,queue:q,idx:0,flipped:false,mode:cfg.scope||'all',scope:cfg.scope||'all',order:cfg.order||'shuffle',tags:cfg.tags,display:cfg.display||'flip',global:false,reveal:0,selfAns:'',selfRes:null,noteOpen:false};
+  studyState={deckId:id,queue:q,idx:0,flipped:false,mode:cfg.scope||'all',scope:cfg.scope||'all',order:cfg.order||'shuffle',tags:cfg.tags,display:cfg.display||'flip',global:false,gradedMap:{},reveal:0,selfAns:'',selfRes:null,noteOpen:false};
   updateStreak();
   go('study');renderStudy();
 }
@@ -3537,7 +3588,7 @@ async function startStudy(id,cfg){
 function studyCard(deckId,cardId){
   const d=getDeck(deckId);const c=d&&d.cards.find(x=>x.id===cardId);
   if(!c){toast('卡片不存在');return;}
-  studyState={deckId,queue:[c],idx:0,flipped:false,mode:'all',scope:'all',order:'shuffle',tags:null,global:false,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false};
+  studyState={deckId,queue:[c],idx:0,flipped:false,mode:'all',scope:'all',order:'shuffle',tags:null,global:false,display:'flip',gradedMap:{},reveal:0,selfAns:'',selfRes:null,noteOpen:false};
   updateStreak();
   go('study');renderStudy();
 }
@@ -3594,7 +3645,7 @@ function renderStudyConfig(){
   const scopeChip=(val,label,num)=>`<div class="q ${c.scope===val?'active':''}" onclick="scSet('scope','${val}')">${label} <span class="muted">${num}</span></div>`;
   const ordChip=(v,l)=>`<div class="q ${c.order===v?'active':''}" onclick="scSet('order','${v}')">${l}</div>`;
   const dpChip=(v,l)=>`<div class="q ${c.display===v?'active':''}" onclick="scSet('display','${v}')">${l}</div>`;
-  const chips=CARD_TAGS.map(t=>`<label class="qe-opt"><input type="checkbox" ${(c.tags||[]).includes(t.key)?'checked':''} onchange="scTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
+  const chips=deckTags(c.id).map(t=>`<label class="qe-opt"><input type="checkbox" ${(c.tags||[]).includes(t.key)?'checked':''} onchange="scTag('${t.key}',this.checked)"> ${t.icon} ${t.label}</label>`).join('');
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">🃏 卡片背诵设置</div>
     <div class="pv-field"><label>范围</label>
@@ -3602,7 +3653,7 @@ function renderStudyConfig(){
     </div>
     <div class="pv-field"><label>标签（可多选 / 可不选）</label>
       <div class="cfg-types">${chips||'<span class="muted">暂无可选标签</span>'}</div>
-      <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager()" style="margin-top:6px">🏷 管理标签</button></div>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="openTagManager(window.__sc.id)" style="margin-top:6px">🏷 管理标签</button></div>
     <div class="pv-field"><label>顺序</label>
       <div class="queue-seg">${ordChip('seq','顺序')}${ordChip('shuffle','乱序')}</div></div>
     <div class="pv-field"><label>默写方式</label>
@@ -3708,6 +3759,7 @@ function renderStudy(){
       <button class="btn btn-primary" style="margin-top:18px" onclick="goBack()">返回</button></div>`;return;
   }
   const card=q[studyState.idx];const total=q.length;
+  const graded=Object.keys(studyState.gradedMap||{}).length;          // 已点评级的卡片数（切换卡不增减，每张只算一次）
   const dispLabelMap={flip:'翻面',occlude:'遮挡',self:'自检'};
   const dispKey=studyState.display||'flip';
   v.innerHTML=`
@@ -3718,12 +3770,13 @@ function renderStudy(){
         <span class="badge ${DISP_BADGE[dispKey]}">${dispLabelMap[dispKey]}</span>
       </div>
     </div>
-    <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${studyState.idx+1}/${total} 张卡</span>
-      <div class="q-bar"><div style="width:${Math.round(studyState.idx/total*100)}%"></div></div></div>
+    <div class="q-top"><span class="muted" style="font-size:13px;font-weight:600">第 ${studyState.idx+1}/${total} 张卡 · 已复习 ${graded}/${total}</span>
+      <div class="q-bar"><div style="width:${Math.round(graded/total*100)}%"></div></div></div>
     ${studyCardHtml(card)}
+    ${(studyState.flipped||(dispKey==='occlude'&&pcWide())||dispKey==='self')?studyTagBarHtml():''}
     ${(studyState.flipped||(dispKey==='occlude'&&pcWide())||dispKey==='self')?studyFeedbackHtml(card):''}
     <div class="nav-row">
-      <button class="btn btn-ghost" ${studyState.idx>0?'':'disabled'} onclick="studyPrev()">◀ 上一张</button>
+      <button class="btn btn-ghost" ${canStudyPrev()?'':'disabled'} onclick="studyPrev()">◀ 上一张</button>
       <span class="nav-mid">${studyState.idx+1} / ${total}</span>
       <button class="btn btn-ghost" ${studyState.idx+1<total?'':'disabled'} onclick="studyNext()">下一张 ▶</button>
     </div>`;
@@ -3800,7 +3853,7 @@ function selfSplitHtml(card){
          <button class="btn btn-ghost btn-sm" onclick="selfRetry('${card.id}')">↺ 重答</button>
        </div>
        ${studyCardExtras(card)}`
-    : `<div class="split-h">✍️ 我的答案</div>
+    : `       <div class="split-h">✍️ 我的答案</div>
        <div class="self-box">
          <textarea id="selfAns" class="inp" rows="3" placeholder="凭记忆默写…">${esc(studyState.selfAns||'')}</textarea>
          <button class="btn btn-primary" onclick="selfCheck('${card.id}')">核对答案</button>
@@ -3810,7 +3863,8 @@ function selfSplitHtml(card){
       <div ${faceAttr}>${toRich(face(card))}</div>
     </div>
     <div class="split-pane self-pane">${pane}</div>
-  </div>`;
+  </div>
+  ${flipped?'':linksNoteHtml(card)}`;
 }
 function studyCardHtml(card){
   const disp=studyState.display;
@@ -3827,7 +3881,8 @@ function studyCardHtml(card){
     if(!studyState.flipped){
       return `<div class="flashcard" id="flash" onclick="flipCard(event)">
         <div ${faceAttr}>${toRich(face(card))}</div>
-        <div class="hint">👆 点一下开始默写</div></div>`;
+        <div class="hint">👆 点一下开始默写</div></div>
+      ${linksNoteHtml(card)}`;
     }
     const reveal=studyState.reveal||0;
     return `<div class="flashcard" id="flash" onclick="flipCard(event)">
@@ -3851,6 +3906,7 @@ function studyCardHtml(card){
       <div class="flashcard" id="flash">
         <div ${faceAttr}>${toRich(face(card))}</div>
       </div>
+      ${linksNoteHtml(card)}
       <div class="split-pane self-pane">
         <div class="split-h">✍️ 我的答案</div>
         <div class="self-box">
@@ -3877,7 +3933,7 @@ function studyCardHtml(card){
   return `<div class="flashcard ${studyState.flipped?'flipped':''}" id="flash" onclick="flipCard(event)">
     <div ${faceAttr}>${studyState.flipped?fmtAnswer(back(card)):toRich(face(card))}</div>
   </div>
-  ${studyState.flipped?linksNoteHtml(card):''}`;
+  ${linksNoteHtml(card)}`;
 }
 function studyFeedbackHtml(card){
   return `<div class="feedback">
@@ -3887,6 +3943,45 @@ function studyFeedbackHtml(card){
     <button class="fb fb-fav ${card.fav?'on':''}" onclick="toggleFav('card','${card.id}',this)" title="收藏/取消收藏">${card.fav?'⭐':'☆'}</button>
   </div>
   <div class="flips"><span>记忆档位：第 ${card.box||1} 级${card.hard?' · 🟡困难':''}${card.forgot?' · 🔴忘记':''}</span></div>`;
+}
+/* 当前卡片所属卡组：全局复习（收藏夹 / 今日复习）时反查，否则用 studyState.deckId */
+function studyCurDeckId(){
+  const card=studyState.queue[studyState.idx];if(!card)return null;
+  if(studyState.global){
+    let hit=null;
+    activeDecks().forEach(d=>{ if(hit)return; if((d.cards||[]).some(c=>c.id===card.id))hit=d.id; });
+    return hit;
+  }
+  return studyState.deckId;
+}
+/* 背诵页内联标签条：直接勾选/取消当前卡片标签，不弹窗、不改写其它卡 */
+function studyTagBarHtml(){
+  const card=studyState.queue[studyState.idx];if(!card)return '';
+  const did=studyCurDeckId();if(!did)return '';
+  const tags=deckTags(did);
+  if(!tags.length)return '';
+  const cur=card.tags||[];
+  const chips=tags.map(t=>`<label class="tg-chip ${cur.includes(t.key)?'on':''}" data-tg="${tags.indexOf(t)}"><input type="checkbox" ${cur.includes(t.key)?'checked':''} onchange="studyToggleTag('${t.key}',this)"> <span>${t.icon} ${esc(t.label)}</span></label>`).join('');
+  return `<div class="tagbar"><span class="tagbar-lb">🏷 标签</span>${chips}</div>`;
+}
+function studyToggleTag(key,inp){
+  const card=studyState.queue[studyState.idx];if(!card)return;
+  const checked=!!inp.checked;
+  card.tags=card.tags||[];
+  if(checked){if(!card.tags.includes(key))card.tags.push(key);}
+  else card.tags=card.tags.filter(x=>x!==key);
+  save();
+  const chip=inp.closest('.tg-chip');if(chip)chip.classList.toggle('on',checked);
+}
+/* 键盘切换第 i 个标签（数字键 4-9 → i=0..5，0 键 → i=6），按当前卡组的标签顺序 */
+function studyToggleTagByIndex(i){
+  const card=studyState.queue[studyState.idx];if(!card)return;
+  const did=studyCurDeckId();if(!did)return;
+  const t=deckTags(did)[i];if(!t)return;
+  card.tags=card.tags||[];
+  if(card.tags.includes(t.key))card.tags=card.tags.filter(x=>x!==t.key);
+  else card.tags.push(t.key);
+  save();renderStudy();
 }
 function flipCard(e){
   // 点图片 = 放大看图（结构图/几何图），不翻面
@@ -3975,8 +4070,11 @@ function selfResultHtml(card,r){
     <div class="self-full"><b>完整答案：</b>${fmtAnswer(back(card))}</div>
   </div>`;
 }
+const GRADE_WEIGHT={0:2,1:1,2:0};   // 复习权重：忘记→2 次、困难→1 次、简单→0 次（简单=已掌握不再安排）
 function grade(level){
   const d=getDeck(studyState.deckId);const card=studyState.queue[studyState.idx];
+  if(!studyState.gradedMap)studyState.gradedMap={};    // 每张卡按"最新一次评级"记录复习权重；上一张切换不丢失，重复评级按最新权重计
+  studyState.gradedMap[card.id]=level;
   const wasWeak=!!card.forgot||!!card.hard||(card.reviews||0)>0; // 曾经记不熟 = 再错即「反复出错」
   card.reviews=(card.reviews||0)+1;
   recordDaily('card');
@@ -4003,7 +4101,20 @@ function grade(level){
 }
 /* 手势 / 键盘：切换上一张 / 下一张（不自动评分，纯浏览导航） */
 function studyNext(){if(studyState.idx+1<studyState.queue.length){studyState.idx++;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;renderStudy();}}
-function studyPrev(){if(studyState.idx>0){studyState.idx--;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;renderStudy();}}
+/* 评「简单」= 该卡已复习完：回退时跳过它们，不能返回；忘记 / 困难仍可回看 */
+function isGradedEasy(id){const g=studyState.gradedMap||{};return g[id]===2;}
+function canStudyPrev(){
+  for(let i=studyState.idx-1;i>=0;i--){const c=studyState.queue[i];if(c&&!isGradedEasy(c.id))return true;}
+  return false;
+}
+function studyPrev(){
+  for(let i=studyState.idx-1;i>=0;i--){
+    const c=studyState.queue[i];
+    if(c&&!isGradedEasy(c.id)){
+      studyState.idx=i;studyState.flipped=false;studyState.reveal=0;studyState.selfAns='';studyState.selfRes=null;renderStudy();return;
+    }
+  }
+}
 
 /* =================== QUIZ =================== */
 let quiz={deckId:null,queue:[],idx:0,mode:'sequential',range:'all',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:true,orders:{}};
@@ -4039,7 +4150,7 @@ function openQuizConfig(id){
   window.__qc={id,range:last.range||'all',types:(last.types!==undefined?last.types:null),order:last.order||'random',shuffle:(last.shuffle!==undefined?last.shuffle:defaultShuffle()),autoNext:(last.autoNext!==undefined?last.autoNext:true)};
   renderQuizConfig();showModal();
 }
-function qcTypesArr(){const c=window.__qc;return c.types===null?['single','multiple','judge']:c.types;}
+function qcTypesArr(){const c=window.__qc;return c.types===null?['single','multiple','judge','indef']:c.types;}
 function qcQuestionList(){
   const c=window.__qc;
   if(c.id==='__all__'){const arr=[];activeDecks().forEach(d=>(d.questions||[]).forEach(q=>arr.push(q)));return arr;}
@@ -4051,7 +4162,7 @@ function renderQuizConfig(){
   const undone=qs.filter(q=>!q.done).length;
   const wrong=qs.filter(q=>q.inWrongBook).length;
   const guessN=qs.filter(q=>q.guess).length;
-  const allChecked=qcTypesArr().length===3;
+  const allChecked=qcTypesArr().length===4;
   const rangeChip=(val,label,n)=>`<div class="q ${c.range===val?'active':''}" onclick="qcSet('range','${val}')">${label} <span class="muted">${n}</span></div>`;
   const typeChip=(val,label)=>`<label class="qe-opt"><input type="checkbox" ${qcTypesArr().includes(val)?'checked':''} onchange="qcType('${val}',this.checked)"> ${label}</label>`;
   document.getElementById('modal-body').innerHTML=`
@@ -4060,7 +4171,7 @@ function renderQuizConfig(){
       <div class="queue-seg">${rangeChip('all','全部',total)}${rangeChip('undone','未做',undone)}${rangeChip('wrong','错题',wrong)}${rangeChip('guess','🎲 蒙题',guessN)}</div></div>
     <div class="pv-field"><label>题型（可多选）</label>
       <label class="qe-opt"><input type="checkbox" ${allChecked?'checked':''} onchange="qcAll(this.checked)"> 全部</label>
-      <div class="cfg-types">${typeChip('single','单选')}${typeChip('multiple','多选')}${typeChip('judge','判断')}</div></div>
+      <div class="cfg-types">${typeChip('single','单选')}${typeChip('multiple','多选')}${typeChip('indef','不定项')}${typeChip('judge','判断')}</div></div>
     <div class="pv-field"><label>顺序</label>
       <div class="queue-seg">
         <div class="q ${c.order==='sequential'?'active':''}" onclick="qcSet('order','sequential')">顺序</div>
@@ -4082,7 +4193,7 @@ function renderQuizConfig(){
     </div>`;
 }
 function qcSet(k,v){window.__qc[k]=v;renderQuizConfig();}
-function qcAll(checked){window.__qc.types=checked?['single','multiple','judge']:[];renderQuizConfig();}
+function qcAll(checked){window.__qc.types=checked?['single','multiple','judge','indef']:[];renderQuizConfig();}
 function qcType(t,checked){
   const c=window.__qc;
   let arr=c.types===null?[]:c.types.slice();
@@ -4151,7 +4262,7 @@ function renderQuiz(){
       <button class="btn btn-primary" style="margin-top:18px" onclick="goBack()">返回</button></div>`;return;
   }
   const q=qs[quiz.idx];const total=qs.length;const pct=Math.round((quiz.idx)/total*100);
-  const isMulti=q.type==='multiple';const isJudge=q.type==='judge';
+  const isMulti=q.type==='multiple'||q.type==='indef';const isJudge=q.type==='judge';
   const optHtml=renderOptions(q);
   v.innerHTML=`
     <div class="row between" style="margin-bottom:10px;gap:8px">
@@ -4166,10 +4277,9 @@ function renderQuiz(){
     <div id="optWrap">${optHtml}</div>
     ${!quiz.submitted?`<div class="guess-bar ${quiz.guess?'on':''}" onclick="toggleGuess()">
       <span class="gb-box">${quiz.guess?'✓':''}</span>
-      <span class="gb-tx"><b>🎲 这题我不确定（蒙的）</b><i>蒙对也会收进蒙题本，避免运气掩盖盲区</i></span>
+      <span class="gb-tx"><b>🎲 这题我不确定（蒙的）</b></span>
     </div>
-    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="submitAnswer()">提交答案</button>
-    <div class="q-foot">${quiz.shuffle&&!isJudge?'本题选项已随机乱序 · ':''}提交后自动切到下一题 · ←→ 或下方按钮切换题目</div>`:''}
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="submitAnswer()">提交答案</button>`:''}
     <div id="quizFeedbackArea"></div>
     <div class="nav-row">
       <button class="btn btn-ghost" ${quiz.idx>0?'':'disabled'} onclick="quizPrev()">◀ 上一题</button>
@@ -4193,9 +4303,9 @@ function dispOrder(q){
   quiz.orders[q.id]=arr;
   return arr;
 }
-/* 正确答案对应的「原始选项下标」集合（单选/多选），判分以此为基准，与展示顺序无关 */
+/* 正确答案对应的「原始选项下标」集合（单选/多选/不定项），判分以此为基准，与展示顺序无关 */
 function correctOrigSet(q){
-  if(q.type==='multiple')return new Set(q.answer.split('').map(c=>c.charCodeAt(0)-65));
+  if(q.type==='multiple'||q.type==='indef')return new Set(q.answer.split('').map(c=>c.charCodeAt(0)-65));
   return new Set([q.answer.charCodeAt(0)-65]);
 }
 /* 正确答案在当前展示顺序下显示成的字母（如 A、B、A、C），用于解析提示 */
@@ -4226,7 +4336,7 @@ function toggleOpt(qid,val,isJudge){
   if(isJudge){
     if(quiz.sel.includes(val))quiz.sel=quiz.sel.filter(x=>x!==val);
     else quiz.sel=[val];
-  }else if(q.type==='multiple'){
+  }else if(q.type==='multiple'||q.type==='indef'){
     if(quiz.sel.includes(val))quiz.sel=quiz.sel.filter(x=>x!==val);
     else quiz.sel.push(val);
   }else{
@@ -4239,7 +4349,7 @@ function submitAnswer(){
   const q=quiz.queue[quiz.idx];const d=quiz.global?findDeckOfQuestion(q.id):getDeck(quiz.deckId);
   const cs=correctOrigSet(q);
   let correct;
-  if(q.type==='multiple'){correct=cs.size===quiz.sel.length&&quiz.sel.every(x=>cs.has(x));}
+  if(q.type==='multiple'||q.type==='indef'){correct=cs.size===quiz.sel.length&&quiz.sel.every(x=>cs.has(x));}
   else if(q.type==='single'){correct=quiz.sel.length===1&&cs.has(quiz.sel[0]);}
   else{correct=quiz.sel.length===1&&quiz.sel[0]===q.answer;}
   quiz.submitted=true;
@@ -4315,7 +4425,7 @@ function unguess(qid){
 function addToWrong(qid){const d=findDeckOfQuestion(qid);const q=d&&d.questions.find(x=>x.id===qid);if(q){q.inWrongBook=true;save();toast('已加入错题本');}}
 /* 题目 -> 记忆卡；已转过的不重复转，返回是否新增 */
 function qToCard(d,q){
-  const ans=q.type==='judge'?q.answer:q.type==='multiple'?q.answer.split('').join('、'):q.answer;
+  const ans=q.type==='judge'?q.answer:(q.type==='multiple'||q.type==='indef')?q.answer.split('').join('、'):q.answer;
   const back=`答案：${ans}\n解析：${q.analysis||'（无）'}`;
   d.cards=d.cards||[];
   if(cardExistsInDeck(d,q.question,back))return false;     // 已转过则不去重重复转
@@ -4980,7 +5090,7 @@ function printChecklist(){
 /* =================== STATS =================== */
 function renderStats(){
   let memTotal=0,memCorrect=0,mastered=0;
-  let quizTotal=0,quizCorrect=0;const typeAgg={single:{t:0,c:0},multiple:{t:0,c:0},judge:{t:0,c:0}};
+  let quizTotal=0,quizCorrect=0;const typeAgg={single:{t:0,c:0},multiple:{t:0,c:0},indef:{t:0,c:0},judge:{t:0,c:0}};
   let wrongTotal=0,cardTotal=0,quizDaysCount=Object.keys(DB.meta.quizDays).length;
   let guessRight=0,guessSubmits=0,guessQs=0,luckyQs=0;
   DB.decks.forEach(d=>{
@@ -5017,7 +5127,7 @@ function renderStats(){
          · 蒙题本现存 <b>${guessQs}</b> 题，其中 <b>${luckyQs}</b> 题曾蒙对——这些是最容易在考场翻车的题<br>
          · 建议：把蒙题批量转成记忆卡，用艾宾浩斯过 2 轮再回来刷</div>`
     : '<div class="muted">还没有蒙题记录。做题时不确定就勾「🎲 蒙的」，能算出你的真实水平</div>';
-  const colors={single:'var(--green)',multiple:'var(--orange)',judge:'var(--primary)'};
+  const colors={single:'var(--green)',multiple:'var(--orange)',indef:'#0ea5e9',judge:'var(--primary)'};
   document.getElementById('st-types').innerHTML=Object.keys(typeAgg).map(t=>{
     const a=typeAgg[t];const acc=a.t?Math.round(a.c/a.t*100):0;
     return `<div class="bar-row"><div class="bl"><span>${TYPE_LABEL[t]}</span><span>${acc}% （${a.c}/${a.t}）</span></div>
@@ -5246,12 +5356,13 @@ function loadSample(){
     questions:[
       {id:uid(),type:'single',question:'马克思主义哲学的基本特征不包括以下哪一项？',options:['实践性','科学性','革命性','主观性'],answer:'D',analysis:'马克思主义哲学特征为实践性、科学性、革命性，不包括主观性。主观性属唯心主义。',inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0},
       {id:uid(),type:'multiple',question:'以下哪些属于唯物辩证法的基本规律？',options:['对立统一规律','量变质变规律','否定之否定规律','因果决定论'],answer:'ABC',analysis:'唯物辩证法三大规律：对立统一、量变质变、否定之否定。',inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0},
-      {id:uid(),type:'judge',question:'马克思主义哲学认为实践是检验真理的唯一标准。',options:['正确','错误'],answer:'正确',analysis:'这是马克思主义认识论的核心观点。',inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0}
+      {id:uid(),type:'judge',question:'马克思主义哲学认为实践是检验真理的唯一标准。',options:['正确','错误'],answer:'正确',analysis:'这是马克思主义认识论的核心观点。',inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0},
+      {id:uid(),type:'indef',question:'下列关于联系的观点，说法正确的有？',options:['联系具有普遍性','联系具有客观性','联系具有多样性','联系可以主观臆造'],answer:'ABC',analysis:'联系是普遍的、客观的、多样的；「主观臆造联系」违背了联系的客观性。',inWrongBook:false,wrongCount:0,guess:false,guessCount:0,guessRight:0}
     ],quiz:{total:0,correct:0,byType:{}}};
   // make some cards due
   deck.cards[0].nextReview=now();
   // 演示用：注入薄弱数据，让「薄弱知识点诊断」首次打开就有内容
-  deck.quiz={total:14,correct:9,byType:{single:{t:5,c:3},multiple:{t:4,c:3},judge:{t:5,c:3}},guessTotal:3,guessRight:1};
+  deck.quiz={total:14,correct:9,byType:{single:{t:5,c:3},multiple:{t:4,c:3},indef:{t:2,c:1},judge:{t:3,c:2}},guessTotal:3,guessRight:1};
   deck.questions[0].wrongCount=3;deck.questions[0].inWrongBook=true;deck.questions[0].guessCount=1;deck.questions[0].guess=true;
   deck.questions[1].wrongCount=2;
   deck.questions[2].wrongCount=1;
@@ -5405,7 +5516,7 @@ function openCardPreview(deckId,id){
     <div class="pv-field"><label>背面</label><div class="preview-box">${fmtAnswer(c.back)}</div></div>
     ${c.note?`<div class="pv-field"><label>📝 笔记</label><div class="preview-box">${toRich(c.note)}</div></div>`:''}
     ${c.ext?`<div class="pv-field"><label>🔗 拓展</label><div class="preview-box">${toRich(c.ext)}</div></div>`:''}
-    ${tagBadges(c)}
+    ${tagBadges(c,d.id)}
     <div class="modal-actions">
       <button class="btn ${c.fav?'btn-primary':'btn-outline'}" onclick="toggleFav('card','${c.id}',this)">${c.fav?'⭐ 已收藏':'☆ 收藏'}</button>
       <button class="btn btn-ghost" onclick="hideModal()">关闭</button>
@@ -5486,7 +5597,7 @@ function renderFav(){
     html+=`<div class="fav-sec-h">🃏 收藏卡片（${f.cards.length}）</div><div class="fav-list">`+
       f.cards.map(({d,c})=>`<div class="li">
         <div class="lt"><div class="a">${toRich(c.front)}</div><div class="b">${toRich(c.back)}</div>
-          ${tagBadges(c)}<div class="fav-deck">📁 ${esc(d.name)}</div></div>
+          ${tagBadges(c,d.id)}<div class="fav-deck">📁 ${esc(d.name)}</div></div>
         <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startStudy('${d.id}',deckStudyCfg(getDeck('${d.id}')))">🃏 背</button>
           <button class="btn fav-on btn-sm" onclick="toggleFav('card','${c.id}',this)" title="取消收藏">⭐</button></div></div>`).join('')+`</div>`;
   }
@@ -6012,9 +6123,12 @@ function wireGestures(){
     const av=document.querySelector('.view.active');if(!av)return;const id=av.id;
     const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT'||tg.isContentEditable))return;
     if(id==='view-study'){
-      if(e.key==='ArrowLeft'){studyNext();e.preventDefault();}
-      else if(e.key==='ArrowRight'){studyPrev();e.preventDefault();}
+      if(e.key==='ArrowLeft'){studyPrev();e.preventDefault();}
+      else if(e.key==='ArrowRight'){studyNext();e.preventDefault();}
       else if(e.key===' '||e.key==='Enter'){flipCard();e.preventDefault();}
+      else if(e.key>='1'&&e.key<='9'){const n=+e.key;if(n<=3)grade(n-1);else studyToggleTagByIndex(n-4);e.preventDefault();}
+      else if(e.key==='0'){studyToggleTagByIndex(6);e.preventDefault();}
+      else if(e.key.toLowerCase()==='f'){const c=studyState.queue[studyState.idx];if(c){toggleFav('card',c.id);renderStudy();}e.preventDefault();}
     }else if(id==='view-quiz'){
       if(e.key==='ArrowLeft'){if(quiz.submitted)nextQ();else submitAnswer();e.preventDefault();}
       else if(e.key==='ArrowRight'){if(quiz.idx>0)quizPrev();e.preventDefault();}
