@@ -317,9 +317,12 @@
 
   /* quiz */
   .q-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
-  .q-head-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 14px}
-  .q-head-row .q-text{font-size:16px;font-weight:700;line-height:1.6;flex:1;min-width:0}
-  .q-head-row .badge{flex-shrink:0;margin-top:3px}
+  /* 题头：徽章 float 首行悬挂，题干首行跟在徽章后、换行回到容器最左（徽章下方不留空）；
+     徽章保持在 data-store 容器外，避免富文本保存时把题型徽章写进题干 */
+  .q-head-row{margin:2px 0 14px}
+  .q-head-row::after{content:'';display:block;clear:both}
+  .q-head-row .q-text{font-size:16px;font-weight:700;line-height:1.6;min-width:0}
+  .q-head-row .badge{float:left;margin:3px 8px 0 0}
   .q-bar{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden}
   .q-bar>div{height:100%;background:var(--primary);transition:.3s}
   .q-done{display:flex;align-items:center;gap:12px;margin-bottom:12px}
@@ -572,8 +575,11 @@
   .cd-card{position:relative}
   .plan-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
   .cd-card .plan-dot{margin-left:2px}
-  .pv-row{display:flex;gap:10px;flex-wrap:wrap}
-  .pv-row .pv-field{flex:1 1 150px;min-width:0}
+  /* 双字段行：用 Grid 布局从结构上杜绝 iOS WKWebView 日期控件的渲染溢出重叠（flex 下 date input
+     的原生渲染宽度可能超过容器压到右侧字段）；窄容器自动退化为单列，等效原 flex-wrap */
+  .pv-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:start}
+  .pv-row .pv-field{min-width:0}
+  .pv-row .pv-field input{width:100%;max-width:100%;min-width:0}
   .plan-colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
   .plan-colors .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;opacity:.5;border:2px solid #fff;box-shadow:0 0 0 1px var(--border)}
   .plan-colors .dot.on{opacity:1;box-shadow:0 0 0 2px var(--primary);transform:scale(1.12)}
@@ -4521,6 +4527,7 @@ function renderHomePlan(){
       <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
       <div class="cd-num">${num}<small>天</small></div>
       <div class="cd-info"><div class="cd-name">📅 距 ${esc(p.name)}</div><div class="cd-date">${p.date?esc(p.date):'无截止日期'} · ${planGoalLabel(p)}</div></div>
+      <div class="cd-acts"><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();goToScore('${p.id}')" title="分数登记与可视化">📊</button></div>
       <div style="color:var(--text-3);font-size:18px">›</div></div>`;
   }else{
     html+=`<div class="cd-card" style="margin-bottom:12px;cursor:pointer" onclick="go('plan')">
