@@ -2137,7 +2137,6 @@ function renderTagManager(){
   const d=getDeck(window.__tagDeckId);const nm=d?esc(d.name):'当前卡组';
   document.getElementById('modal2-body').innerHTML=`
     <div class="modal-title">🏷 自定义标签 · ${nm}</div>
-    <p class="muted" style="margin:2px 0 10px">每个卡组的标签<b>相互独立</b>，这里只管理「${nm}」。改名 / 改图标同步到本卡组已标记的卡片与背诵设置；删除会从本卡组卡片上一并移除。<b>点「保存」后才生效，点「取消」可放弃本次全部修改。</b></p>
     <div class="tag-rows">${rows||'<div class="muted">还没有标签</div>'}</div>
     <div class="pv-field" style="margin-top:12px"><label>新增标签</label>
       <div class="row" style="gap:8px">
@@ -4655,16 +4654,28 @@ function subjStat(p,sid){
   const sum=ts.reduce((a,b)=>a+b,0);
   return {count:ts.length,avg:sum/ts.length,max:Math.max(...ts),min:Math.min(...ts)};
 }
-/* 总分趋势：按考卷序号（如「2024年1卷」）汇总同卷各科目测试分（同理「同卷三门科目相加」） */
+/* 总分趋势：按考卷序号（如「2024年1卷」）汇总同卷各科目测试分（同理「同卷三门科目相加」）。
+   仅当全部科目都存在该考卷序号的记录时才汇总该卷——少一门都不出总分点，避免缺科总分被误读为骤降；
+   已删除科目的历史记录不参与汇总 */
 function totalByPaper(p){
+  const subIds=planSubjects(p).map(s=>String(s.id));
+  const need=subIds.length;
+  if(!need)return [];
+  const set=new Set(subIds);
   const map={};
   planTests(p).forEach(t=>{
     const key=t.paper&&t.paper.trim(); if(!key)return;            // 未填考卷序号的记录不计入总分趋势
-    if(!map[key])map[key]={paper:key,total:0,_min:null};
+    if(!set.has(String(t.subjectId)))return;                      // 已删科目：不参与「集齐」判断也不计分
+    if(!map[key])map[key]={paper:key,total:0,subjects:{},_min:null};
     map[key].total+=(+t.score||0);
+    map[key].subjects[String(t.subjectId)]=true;
     if(t.date&&(map[key]._min===null||t.date<map[key]._min))map[key]._min=t.date;
   });
-  return Object.keys(map).map(k=>{const o=map[k];const r={paper:o.paper,total:Math.round(o.total*100)/100};if(o._min)r._min=o._min;return r;})
+  return Object.keys(map).map(k=>{
+      const o=map[k];
+      if(Object.keys(o.subjects).length<need)return null;         // 科目未集齐：该卷不汇总
+      const r={paper:o.paper,total:Math.round(o.total*100)/100};if(o._min)r._min=o._min;return r;})
+    .filter(Boolean)
     .sort((a,b)=>(a._min&&b._min)?(a._min<b._min?-1:1):(a.paper<b.paper?-1:1));
 }
 /* 把数值向上取到「整齐」的上限（用于折线图纵轴） */
@@ -4674,8 +4685,12 @@ function niceMaxArr(vals){
   for(const x of NICE)if(x>=max)return x;
   return Math.ceil(max/1000)*1000+1000;
 }
-/* 点击数据点浮现分数注释，3秒自动消失 */
+/* 点击数据点浮现分数注释，3秒自动消失；点别处 / 滚动 / 滑动 / 按键立即收起（点其他数据点则切换提示） */
 let _scoreTipTimer=null;
+function hideScoreTip(){
+  if(_scoreTipTimer){clearTimeout(_scoreTipTimer);_scoreTipTimer=null;}
+  const t=document.getElementById('score-tip');if(t)t.remove();
+}
 function showScoreTip(el){
   const old=document.getElementById('score-tip');
   if(old)old.remove();
@@ -4688,7 +4703,18 @@ function showScoreTip(el){
   tip.style.left=(rect.left+rect.width/2)+'px';
   tip.style.top=(rect.top-6)+'px';
   document.body.appendChild(tip);
-  _scoreTipTimer=setTimeout(()=>{const t=document.getElementById('score-tip');if(t)t.remove();_scoreTipTimer=null;},3000);
+  _scoreTipTimer=setTimeout(hideScoreTip,3000);
+}
+/* 悬浮分数自动收起：点空白（pointerdown 落点非数据点）、滚轮、触摸滑动、任意按键、滚动（捕获阶段，覆盖页面与内部容器） */
+function initScoreTipDismiss(){
+  document.addEventListener('pointerdown',e=>{
+    const onDot=e.target&&e.target.closest?e.target.closest('circle[data-tip]'):null;
+    if(!onDot)hideScoreTip();       // 点在数据点上交给 click 切换提示，其余一律收起
+  });
+  document.addEventListener('wheel',hideScoreTip,{passive:true});
+  document.addEventListener('touchmove',hideScoreTip,{passive:true});
+  document.addEventListener('keydown',hideScoreTip);
+  document.addEventListener('scroll',hideScoreTip,true);
 }
 /* 极简 SVG 折线趋势图：pts=[{y,label}], refs=[{y,color,label}] 参考线 */
 function scoreLineChart(o){
@@ -4786,8 +4812,8 @@ function renderScoreSubject(){
         return `<div class="test-row link" onclick="openTestModal('${t.id}')">
           <span class="t-date">${esc(t.date||'')}</span>
           ${t.paper?`<span class="t-paper">${esc(t.paper)}</span>`:'<span class="t-paper"></span>'}
-          <span class="t-score">${esc(t.score)}</span>
           ${t.note?`<span class="t-note">${esc(t.note)}</span>`:'<span class="t-note"></span>'}
+          <span class="t-score">${esc(t.score)}</span>
         </div>`;
       }).join('')}</div></div>`;
   }
@@ -4865,10 +4891,15 @@ function scoreTestListHtml(p){
         <span class="t-date">${esc(t.date||'')}</span>
         <span class="t-subj">${esc(s.name||'已删科目')}</span>
         ${t.paper?`<span class="t-paper">${esc(t.paper)}</span>`:'<span class="t-paper"></span>'}
-        <span class="t-score">${esc(t.score)}</span>
         ${t.note?`<span class="t-note">${esc(t.note)}</span>`:'<span class="t-note"></span>'}
+        <span class="t-score">${esc(t.score)}</span>
       </div>`;
     }).join('')}</div></div>`;
+}
+/* —— 分数相关保存后的实时刷新：身处单科详情页时刷单科页，否则刷分数页（避免「保存后要退出重进才更新」） —— */
+function refreshScoreViews(){
+  if(activeView()==='score-subject')renderScoreSubject();
+  else renderScorePlan();
 }
 /* —— 科目增删改 —— */
 function openSubjectModal(id){
@@ -4901,7 +4932,7 @@ function saveSubject(){
   p.subjects=p.subjects||[];
   if(window.__subjId){const s=p.subjects.find(x=>String(x.id)===String(window.__subjId));if(s){s.name=name;s.pass=isNaN(pass)?null:pass;s.target=isNaN(target)?null:target;s.full=isNaN(full)?null:full;}}
   else p.subjects.push({id:uid(),name,pass:isNaN(pass)?null:pass,target:isNaN(target)?null:target,full:isNaN(full)?null:full});
-  save();hideModal();renderScorePlan();toast('已保存');
+  save();hideModal();refreshScoreViews();toast('已保存');
 }
 function delSubject(id){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
@@ -4911,7 +4942,7 @@ function delSubject(id){
   if(!confirm('确定删除科目「'+esc(s.name)+'」？'+tail+'\n此操作不可撤销。'))return;
   p.subjects=(p.subjects||[]).filter(x=>String(x.id)!==String(id));
   if(n)p.tests=(p.tests||[]).filter(t=>String(t.subjectId)!==String(id));
-  save();hideModal();renderScorePlan();toast(n?`已删除科目及 ${n} 条测试`:'已删除科目');
+  save();hideModal();refreshScoreViews();toast(n?`已删除科目及 ${n} 条测试`:'已删除科目');
 }
 /* —— 测试登记增删改 —— */
 function openTestModal(id,defSubjectId){
@@ -4949,19 +4980,19 @@ function saveTest(){
   p.tests=p.tests||[];
   if(window.__testId){const t=p.tests.find(x=>String(x.id)===String(window.__testId));if(t){t.subjectId=subjectId;t.date=date;t.score=score;t.note=note;t.paper=paper;}}
   else p.tests.push({id:uid(),subjectId,date,score,note,paper});
-  save();hideModal();renderScorePlan();toast('已登记');
+  save();hideModal();refreshScoreViews();toast('已登记');
 }
 function delTest(id){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
   const t=(p.tests||[]).find(x=>String(x.id)===String(id)); if(!t)return;
   if(!confirm('确定删除这条测试记录？\n（'+esc(t.date||'')+' · '+esc(t.score)+'分）\n此操作不可撤销。'))return;
   p.tests=p.tests.filter(x=>String(x.id)!==String(id));
-  save();renderScorePlan();toast('已删除');
+  save();hideModal();refreshScoreViews();toast('已删除');
 }
 /* —— 总分趋势开关 + 总分目标/及格 —— */
 function toggleCombineTotal(){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
-  p.combineTotal=!p.combineTotal; save(); renderScorePlan();
+  p.combineTotal=!p.combineTotal; save(); refreshScoreViews();
   toast(p.combineTotal?'已开启总分趋势':'已关闭总分趋势');
 }
 function editTotalTarget(){
@@ -4984,7 +5015,7 @@ function saveTotalTarget(){
   const tp=parseFloat(document.getElementById('tt-pass').value);
   const tt=parseFloat(document.getElementById('tt-target').value);
   p.totalPass=isNaN(tp)?null:tp; p.totalTarget=isNaN(tt)?null:tt;
-  save();hideModal();renderScorePlan();toast('已保存');
+  save();hideModal();refreshScoreViews();toast('已保存');
 }
 /* 考前冲刺清单：筛近 SPRINT_DAYS 天内复习过、但仍记不熟的卡片（只看最近状态，避免陈年旧卡混进来）；
    再加上用户手动复习钉住、或反复出错自动入列的卡片 / 题目（持久保留，不受近 5 天限制） */
@@ -6109,6 +6140,7 @@ function applyViewportMode(){
   window.addEventListener('beforeunload',()=>{ try{autoBackup();}catch(e){} try{dumpOnExit();}catch(_){} try{saveReviewSession();}catch(e){} });
   wireGestures();                                 // 键盘导航（←→ / 空格）
   initTextTools();                                // 长按选中 / 标记 / 高亮
+  initScoreTipDismiss();                          // 趋势图悬浮分数：点别处 / 滚动 / 滑动 / 按键自动收起
   /* 先打开 IndexedDB 弹性后备（让 storageAvailable 尽快可用，避免启动瞬间误判“无法保存”） */
   try{ mcIDB().catch(()=>{}); }catch(e){}
   refreshStoreStatus();                           // 探测本地存储是否可用，不可用则提示导出兜底
