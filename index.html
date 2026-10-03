@@ -478,7 +478,7 @@
     .sheet-cancel{display:none}                      /* PC 端依赖点弹窗外关闭，去掉冗余按钮 */
   }
   .topbar .tabs{flex:1;min-width:0}
-  .top-actions{flex-shrink:0;gap:6px}
+  .top-actions{flex-shrink:0;gap:6px;margin-left:auto}  /* 移动端 tabs 被 max-width 截断吃不满时，按钮仍贴顶栏最右 */
 
   /* 存储管理 */
   .sg-bar{height:10px;border-radius:20px;background:#e2e8f0;overflow:hidden}
@@ -578,8 +578,11 @@
   /* 双字段行：用 Grid 布局从结构上杜绝 iOS WKWebView 日期控件的渲染溢出重叠（flex 下 date input
      的原生渲染宽度可能超过容器压到右侧字段）；窄容器自动退化为单列，等效原 flex-wrap */
   .pv-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:start}
-  .pv-row .pv-field{min-width:0}
+  /* iOS/iPadOS WKWebView 对原生 date 控件按系统内在宽度渲染、无视网格/flex 布局约束，列内溢出会压住相邻字段；
+     appearance:none 让其回到标准盒模型，width:100% 严格生效；overflow:hidden 兜底裁切任何残余溢出 */
+  .pv-row .pv-field{min-width:0;overflow:hidden}
   .pv-row .pv-field input{width:100%;max-width:100%;min-width:0}
+  .pv-row .pv-field input[type=date]{-webkit-appearance:none;appearance:none}
   .plan-colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
   .plan-colors .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;opacity:.5;border:2px solid #fff;box-shadow:0 0 0 1px var(--border)}
   .plan-colors .dot.on{opacity:1;box-shadow:0 0 0 2px var(--primary);transform:scale(1.12)}
@@ -793,23 +796,8 @@
     .topbar .brand .logo{margin-right:0}
   }
 
-  /* ===== 每日学习备忘录 ===== */
-  .memo-card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin:14px 0;border-left:4px solid var(--orange)}
-  .memo-card .memo-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px}
-  .memo-card .memo-hd .t{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
-  .memo-card textarea{width:100%;min-height:62px;font-size:14px;line-height:1.7;resize:vertical}
-  .memo-saved{font-size:11px;color:var(--green);opacity:0;transition:.3s;white-space:nowrap}
-  .memo-saved.show{opacity:1}
-  .memo-hist{margin-top:10px;border-top:1px dashed var(--border);padding-top:6px}
-  .memo-hist .mh-row{display:flex;gap:8px;align-items:flex-start;font-size:12px;padding:6px 0;border-bottom:1px dashed #eef2f7}
-  .memo-hist .mh-row:last-child{border-bottom:none}
-  .memo-hist .mh-d{color:var(--text-3);white-space:nowrap;font-weight:600;flex-shrink:0}
-  .memo-hist .mh-t{color:var(--text-2);flex:1;white-space:pre-wrap;word-break:break-word}
-
   /* ===== 首页模块：单栏流式，自适应宽度（不做多列 / 手柄重排） ===== */
   .home-mods{display:flex;flex-direction:column;gap:14px}
-  .memo-empty{font-size:12px;color:var(--text-3);text-align:center;padding:6px 0}
-  .memo-prefill{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:13px;color:#92400e;margin-bottom:10px;white-space:pre-wrap;word-break:break-word}
 
   /* ===== 长按选中 / 标记 / 高亮 ===== */
   #text-tools{position:fixed;z-index:200;display:none;align-items:center;gap:4px;background:#1f2937;color:#fff;
@@ -863,7 +851,6 @@
       </div>
       <div class="row top-actions">
         <button class="btn btn-ghost btn-sm" onclick="openSync()" title="云端同步">☁ 同步</button>
-        <button class="btn btn-ghost btn-sm" onclick="openMemo()" title="今日备忘录">📝 备忘</button>
       </div>
     </div>
   </div>
@@ -1090,7 +1077,6 @@ function loadDB(){
     d.meta.backlog=d.meta.backlog||{cards:0,quiz:0};
     d.meta.lastSettle=d.meta.lastSettle||null;      // 配额缓冲结算游标（最后结算到的日期）
     d.meta.planTomorrow=d.meta.planTomorrow||{cards:[],questions:[]}; // 次日复习计划：薄弱知识点 id
-    d.meta.memos=d.meta.memos||{};                   // 每日学习备忘录：{YYYY-MM-DD: 文本}
     d.meta.tags=d.meta.tags||[];                     // 自定义卡片标签（空则用默认种子）
     migratePlans(d);                                 // 旧 exams/goals → plans 一次性迁移
     // 蒙题字段兼容旧数据
@@ -1104,7 +1090,7 @@ function loadDB(){
     migrateDeckTags(d);
     return d;
   }
-  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},reviewSession:null,plans:[],backlog:{cards:0,quiz:0},lastSettle:null,memos:{}}};
+  return {decks:[],folders:[],meta:{streak:0,lastStudy:null,quizDays:{},cardDays:{},planTomorrow:{cards:[],questions:[]},sprintPinned:{cards:[],questions:[]},reviewSession:null,plans:[],backlog:{cards:0,quiz:0},lastSettle:null}};
 }
 /* 兼容旧数据：把单一 goals + 多 exams 合并成多套独立备考计划 plans。
    每个旧 exam → 一套「只有倒计时、不设每日目标」的计划（目标可不填，避免多套考试把目标累加翻倍）；
@@ -1685,10 +1671,9 @@ function openDiagMenu(){
     {icon:'📤',label:'导出诊断报告',onclick:"exportDiagnosis()"},
   ]);
 }
-/* 刷题页头部：备忘 / 设置 */
+/* 刷题页头部：设置 */
 function openQuizMenu(){
   openSheet('更多操作',[
-    {icon:'📝',label:'今日备忘录',sub:'记录背诵中遇到的问题',onclick:"openMemo()"},
     {icon:'⚙',label:'刷题设置',onclick:"openQuizConfigFromQuiz()"},
     {icon:'✏️',label:'编辑本道题目',sub:'修改题干 / 选项 / 答案 / 解析',onclick:"editCurrentQuizQuestion()"},
   ]);
@@ -1706,13 +1691,12 @@ function editCurrentQuizQuestion(){
   closeSheet();
   openEditQuestion(deckId,q.id);
 }
-/* 卡片背诵页头部：设置 / 记问题 / 默写方式 / 范围 / 顺序 —— 与刷题页「更多」结构一致 */
+/* 卡片背诵页头部：设置 / 默写方式 / 范围 / 顺序 —— 与刷题页「更多」结构一致 */
 function openStudyMenu(){
   const dispMap={flip:'翻面',occlude:'遮挡',self:'自检',split:'对照'};
   const scopeMap={all:'全部',unstudied:'未背',due:'复习',easy:'简单',hard:'困难',forgot:'忘记'};
   const items=[
     {icon:'⚙',label:'背诵设置',sub:studyState.global?'退出后重进可改范围':'范围 / 标签 / 顺序 / 默写方式',onclick:"openStudyConfigFromStudy()"},
-    {icon:'📝',label:'记问题',sub:'记录背诵中的疑问',onclick:"quickMemoFromStudy()"},
     {icon:'🔠',label:'阅读设置',sub:'字体 / 行距 / 左右对照',onclick:"openStudyReadSettings()"},
     {icon:'✏️',label:'编辑本张卡片',sub:'修改正反面 / 笔记 / 链接',onclick:"editCurrentStudyCard()"},
   ];
@@ -3576,7 +3560,6 @@ function dueCardQueue(deck){
 }
 async function startStudy(id,cfg){
   cfg=cfg||{scope:'all',tags:null,order:'shuffle',display:'flip'};
-  await maybeSyncPull(true);                 // 进入卡片背诵前，先拉取云端最新卡片列表
   const d=getDeck(id);if(!d.cards||!d.cards.length){toast('没有卡片可背');return;}
   saveDeckStudyCfg(id,cfg);                       // 记忆本次背诵设置，下次直接开始即用
   const q=buildStudyQueue(d,cfg);
@@ -3588,6 +3571,7 @@ async function startStudy(id,cfg){
   studyState={deckId:id,queue:q,idx:0,flipped:false,mode:cfg.scope||'all',scope:cfg.scope||'all',order:cfg.order||'shuffle',tags:cfg.tags,display:cfg.display||'flip',global:false,gradedMap:{},reveal:0,selfAns:'',selfRes:null,noteOpen:false};
   updateStreak();
   go('study');renderStudy();
+  maybeSyncPull(true);                 // 云端对齐转后台：不再阻塞进入背诵（点「开始背诵」立即响应）
 }
 /* 单卡背诵：从卡组卡片列表点某张卡，直接进入只背这张卡 */
 function studyCard(deckId,cardId){
@@ -3771,7 +3755,7 @@ function renderStudy(){
     <div class="row between" style="margin-bottom:10px;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="goBack()">← 退出</button>
       <div class="row" style="gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="openStudyMenu()" title="更多（设置 / 记问题 / 阅读设置 / 编辑卡片）">⋯ 更多</button>
+        <button class="btn btn-ghost btn-sm" onclick="openStudyMenu()" title="更多（设置 / 阅读设置 / 编辑卡片）">⋯ 更多</button>
         <span class="badge ${DISP_BADGE[dispKey]}">${dispLabelMap[dispKey]}</span>
       </div>
     </div>
@@ -4125,12 +4109,12 @@ function studyPrev(){
 let quiz={deckId:null,queue:[],idx:0,mode:'sequential',range:'all',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:true,orders:{}};
 async function startQuiz(id,cfg){
   cfg=cfg||{range:'all',types:null,order:'random',shuffle:defaultShuffle()};
-  await maybeSyncPull(true);                 // 进入刷题前，先拉取云端最新题目列表
   const d=getDeck(id);if(!d.questions||!d.questions.length){toast('没有题目');return;}
   const qs=buildQuizQueue(d,cfg);
   if(!qs.length){toast(rangeEmptyMsg(cfg.range));return;}
   quiz={deckId:id,queue:qs,idx:0,mode:cfg.order,range:cfg.range,types:cfg.types,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:cfg.shuffle,orders:{},autoNext:(cfg.autoNext!==undefined?cfg.autoNext:(DB.meta.lastQuiz&&DB.meta.lastQuiz.autoNext!==undefined?DB.meta.lastQuiz.autoNext:true))};
   go('quiz');renderQuiz();
+  maybeSyncPull(true);                 // 云端对齐转后台：不再阻塞进入刷题（与背诵一致）
 }
 function buildQuizQueue(d,cfg){
   let qs=d.questions.slice();
@@ -5880,39 +5864,6 @@ function importDeckData(data){
   toast('已导入卡组「'+nm+'」，共 '+(nd.cards||[]).length+' 张卡片 / '+(nd.questions||[]).length+' 道题目（不影响其他科目）');
   return true;
 }
-
-/* =================== 每日学习备忘录 =================== */
-function getMemo(date){return (DB.meta.memos&&DB.meta.memos[date])||'';}
-function setMemo(date,text){DB.meta.memos=DB.meta.memos||{};DB.meta.memos[date]=text;save();}
-let _memoTimer=null;
-function memoInput(val){
-  DB.meta.memos=DB.meta.memos||{};DB.meta.memos[todayKey()]=val;
-  const s=document.getElementById('memo-saved');if(s)s.classList.add('show');
-  clearTimeout(_memoTimer);_memoTimer=setTimeout(()=>{save();if(s)s.classList.remove('show');},700);
-}
-function memoBlur(){save();}
-function memoHistoryHtml(){
-  const m=DB.meta.memos||{};const keys=Object.keys(m).filter(k=>k&&m[k]&&m[k].trim()).sort().reverse();
-  const recent=keys.slice(0,14);if(!recent.length)return '<div class="memo-empty">暂无历史备忘录</div>';
-  return recent.map(k=>`<div class="mh-row"><span class="mh-d">${k.slice(5)}</span><span class="mh-t">${esc(m[k])}</span></div>`).join('');
-}
-function openMemo(prefill){
-  const today=todayKey();const cur=getMemo(today);const hist=memoHistoryHtml();
-  document.getElementById('modal-body').innerHTML=`<div class="modal-title">📝 每日学习备忘录</div>
-    <div class="row between" style="margin-bottom:6px"><span class="muted" style="font-size:12px">${today}（今天）</span>
-      <button class="btn btn-ghost btn-xs" onclick="copyMemo()">复制全文</button></div>
-    <textarea id="memoEdit" class="inp" rows="5" placeholder="写下今天背诵遇到的问题、卡壳的知识点…">${esc(cur)}</textarea>
-    <div class="row" style="gap:8px;margin-top:10px">
-      <button class="btn btn-primary" onclick="saveMemo()">保存</button>
-      <button class="btn btn-ghost" onclick="hideModal()">关闭</button>
-    </div>
-    <div class="memo-hist" id="memoHist">${hist}</div>`;
-  showModal();
-  if(prefill){const ta=document.getElementById('memoEdit');if(ta){const seed=(cur?cur+'\n':'')+'• '+prefill;ta.value=seed;ta.focus();try{ta.setSelectionRange(seed.length,seed.length);}catch(e){}}}
-}
-function saveMemo(){const ta=document.getElementById('memoEdit');if(!ta)return;setMemo(todayKey(),ta.value);toast('已保存今日备忘录');hideModal();const mt=document.getElementById('home-memo');if(mt)mt.value=ta.value;}
-function copyMemo(){const t=getMemo(todayKey());if(!t){toast('今天还没有备忘');return;}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('已复制')).catch(()=>fallbackCopy(t));else fallbackCopy(t);}
-function quickMemoFromStudy(){const card=studyState.queue[studyState.idx];if(!card){openMemo();return;}openMemo(stripHtml(card.front).slice(0,60));}
 
 /* =================== 长按选中 / 标记 / 高亮 =================== */
 let _txtRange=null,_txtStore=null,_ttTimer=null;
