@@ -329,8 +329,13 @@
   .q-bar.thin{height:5px}
   .q-bar.thin>div{background:var(--green)}
   .opt{display:flex;align-items:center;gap:12px;padding:13px 15px;border:2px solid var(--border);border-radius:var(--radius-s);
-       cursor:pointer;margin-bottom:10px;font-size:15px;transition:.12s;background:#fff}
-  .opt:hover{border-color:var(--primary)}
+       cursor:pointer;margin-bottom:10px;font-size:15px;transition:.12s;background:#fff;
+       -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  /* 仅鼠标等真正支持悬停的指针设备显示 hover 蓝边；触摸设备长按/抬起后 :hover 会粘连不消失，故排除 */
+  @media (hover:hover) and (pointer:fine){ .opt:hover{border-color:var(--primary)} }
+  /* 长按划掉（排除选项）：划线 + 淡化，光标变禁止，给个细微底色区分 */
+  .opt.struck{opacity:.5;text-decoration:line-through;cursor:not-allowed;border-style:dashed;border-color:var(--text-3);background:#f1f5f9}
+  .opt.struck .lt{background:var(--text-3);color:#fff;border-color:var(--text-3)}
   .opt.sel{border-color:var(--primary);background:var(--primary-light)}
   .opt.correct{border-color:var(--green);background:var(--green-light)}
   .opt.wrong{border-color:var(--red);background:var(--red-light)}
@@ -2458,7 +2463,7 @@ function startGlobalQuiz(qs,review){
   qs=qs||(studyState.afterWrong||[]);
   if(!qs||!qs.length){toast('没有错题需要刷');go('home');return;}
   const isReview=(review!==undefined)?review:!!(studyState&&studyState.review);
-  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'wrong',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true,review:isReview};
+  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'wrong',types:null,sel:[],strike:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true,review:isReview};
   if(studyState&&studyState.review)studyState.review=false; // 卡片阶段已结束，转交 quiz 接管会话
   saveReviewSession();
   go('quiz');renderQuiz();
@@ -4106,13 +4111,13 @@ function studyPrev(){
 }
 
 /* =================== QUIZ =================== */
-let quiz={deckId:null,queue:[],idx:0,mode:'sequential',range:'all',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:true,orders:{}};
+let quiz={deckId:null,queue:[],idx:0,mode:'sequential',range:'all',types:null,sel:[],strike:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:true,orders:{}};
 async function startQuiz(id,cfg){
   cfg=cfg||{range:'all',types:null,order:'random',shuffle:defaultShuffle()};
   const d=getDeck(id);if(!d.questions||!d.questions.length){toast('没有题目');return;}
   const qs=buildQuizQueue(d,cfg);
   if(!qs.length){toast(rangeEmptyMsg(cfg.range));return;}
-  quiz={deckId:id,queue:qs,idx:0,mode:cfg.order,range:cfg.range,types:cfg.types,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:cfg.shuffle,orders:{},autoNext:(cfg.autoNext!==undefined?cfg.autoNext:(DB.meta.lastQuiz&&DB.meta.lastQuiz.autoNext!==undefined?DB.meta.lastQuiz.autoNext:true))};
+  quiz={deckId:id,queue:qs,idx:0,mode:cfg.order,range:cfg.range,types:cfg.types,sel:[],strike:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:cfg.shuffle,orders:{},autoNext:(cfg.autoNext!==undefined?cfg.autoNext:(DB.meta.lastQuiz&&DB.meta.lastQuiz.autoNext!==undefined?DB.meta.lastQuiz.autoNext:true))};
   go('quiz');renderQuiz();
   maybeSyncPull(true);                 // 云端对齐转后台：不再阻塞进入刷题（与背诵一致）
 }
@@ -4218,18 +4223,18 @@ function qcStart(){
       if(!qs.length){toast(rangeEmptyMsg(cfg.range));renderQuiz();return;}
       quiz.queue=qs;quiz.range=cfg.range;quiz.types=cfg.types;quiz.mode=cfg.order;
     }
-    quiz.idx=0;quiz.sel=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();return;
+    quiz.idx=0;quiz.sel=[];quiz.strike=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();return;
   }
   startQuiz(c.id,{range:c.range,types,order:c.order,shuffle:c.shuffle,autoNext:c.autoNext});
 }
 function qcReorder(order){
   if(quiz.global){
     if(order==='random'){const a=quiz.queue.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}quiz.queue=a;}
-    quiz.mode=order;quiz.idx=0;quiz.sel=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();return;
+    quiz.mode=order;quiz.idx=0;quiz.sel=[];quiz.strike=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();return;
   }
   const d=getDeck(quiz.deckId);
   const qs=buildQuizQueue(d,{range:quiz.range,types:quiz.types,order});
-  quiz.queue=qs;quiz.idx=0;quiz.mode=order;quiz.sel=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();
+  quiz.queue=qs;quiz.idx=0;quiz.mode=order;quiz.sel=[];quiz.strike=[];quiz.submitted=false;quiz.guess=false;quiz.rGuess=0;quiz.rLucky=0;renderQuiz();
 }
 function renderQuiz(){
   const v=document.getElementById('view-quiz');
@@ -4275,6 +4280,44 @@ function renderQuiz(){
       <span class="nav-mid">${quiz.idx+1} / ${total}</span>
       <button class="btn btn-ghost" ${quiz.idx+1<total?'':'disabled'} onclick="nextQ()">下一题 ▶</button>
     </div>`;
+  if(!quiz.submitted)bindOptWrap();
+}
+/* ---- 选项交互：单击=选择（toggleOpt）；长按=划掉/恢复（toggleStrike） ---- */
+let optLongPressed=false; // 模块级：长按时置位，跨重渲染保活，吞掉随后的误触 click
+function bindOptWrap(){
+  const wrap=document.getElementById('optWrap');if(!wrap)return;
+  let lpTimer=null, moved=false, sx=0, sy=0;
+  const clear=()=>{if(lpTimer){clearTimeout(lpTimer);lpTimer=null;}};
+  wrap.addEventListener('pointerdown',e=>{
+    const opt=e.target.closest('.opt');if(!opt)return;
+    moved=false;sx=e.clientX;sy=e.clientY;
+    lpTimer=setTimeout(()=>{optLongPressed=true;toggleStrike(opt);setTimeout(()=>optLongPressed=false,250);},480);
+  });
+  wrap.addEventListener('pointermove',e=>{
+    if(!lpTimer)return;
+    if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10){moved=true;clear();}
+  });
+  wrap.addEventListener('pointerup',()=>clear());
+  wrap.addEventListener('pointercancel',()=>clear());
+  wrap.addEventListener('pointerleave',()=>clear());
+  wrap.addEventListener('contextmenu',e=>e.preventDefault()); // 屏蔽移动端长按弹出菜单
+  wrap.addEventListener('click',e=>{
+    if(optLongPressed){optLongPressed=false;return;} // 长按已处理划掉，吞掉随后的 click，避免误选
+    const opt=e.target.closest('.opt');if(!opt)return;
+    if(opt.classList.contains('struck'))return; // 已划掉的选项不可选
+    const qid=opt.dataset.qid, isJudge=opt.dataset.judge==='1';
+    const val=isJudge?opt.dataset.val:Number(opt.dataset.val);
+    toggleOpt(qid,val,isJudge);
+  });
+}
+function toggleStrike(optEl){
+  const q=quiz.queue[quiz.idx];if(!q||quiz.submitted)return;
+  const isJudge=optEl.dataset.judge==='1';
+  const val=isJudge?optEl.dataset.val:Number(optEl.dataset.val);
+  quiz.strike=quiz.strike||[];
+  if(quiz.strike.includes(val))quiz.strike=quiz.strike.filter(x=>x!==val);
+  else{quiz.strike.push(val);quiz.sel=quiz.sel.filter(x=>x!==val);} // 划掉=排除，同时取消其选中
+  renderQuiz();
 }
 /* ---- 选项乱序：每道题在当次刷题里生成一份固定的展示顺序，按原始下标判分 ---- */
 function defaultShuffle(){return DB.meta.shuffleOptions!==false;}
@@ -4312,13 +4355,16 @@ function optRow(q,text,dispIdx,isJudge,origIdx){
   const letter=String.fromCharCode(65+dispIdx);
   const isCorrect=isJudge?(text===q.answer):correctOrigSet(q).has(origIdx);
   const sel=isJudge?quiz.sel.includes(text):quiz.sel.includes(origIdx);
+  const struck=isJudge?(quiz.strike||[]).includes(text):(quiz.strike||[]).includes(origIdx);
   let cls='opt';
+  if(struck)cls+=' struck';
   if(quiz.submitted){if(isCorrect)cls+=' correct';else if(sel)cls+=' wrong';}
   else if(sel)cls+=' sel';
   const badge=isJudge?(text==='正确'?'✔':'✖'):letter;
-  const clickable=quiz.submitted?'':`onclick="toggleOpt('${q.id}',${isJudge?`'${text}'`:origIdx},${isJudge})"`;
+  const val=isJudge?text:origIdx;
   const shown=isJudge?text:(letter+' . '+esc(text));
-  return `<div class="${cls}" ${clickable}><span class="lt">${badge}</span><span>${md(text)}</span></div>`;
+  // 选择走事件委托（optWrap），长按划掉也在同一处处理，避免内联 onclick 冲突
+  return `<div class="${cls}" data-qid="${q.id}" data-val="${val}" data-judge="${isJudge?1:0}"><span class="lt">${badge}</span><span>${md(text)}</span></div>`;
 }
 function toggleOpt(qid,val,isJudge){
   const q=quiz.queue[quiz.idx];
@@ -4429,8 +4475,8 @@ function toCard(qid){
   if(cur.deckId===d.id&&dv&&dv.classList&&dv.classList.contains('active'))renderDetail();
   toast('已转为记忆卡片，进入艾宾浩斯复习');
 }
-function nextQ(){quiz.idx++;quiz.sel=[];quiz.submitted=false;quiz.guess=false;if(quiz.idx>=quiz.queue.length)clearReviewSession();renderQuiz();}
-function quizPrev(){if(quiz.idx>0){quiz.idx--;quiz.sel=[];quiz.submitted=false;quiz.guess=false;renderQuiz();}}
+function nextQ(){quiz.idx++;quiz.sel=[];quiz.strike=[];quiz.submitted=false;quiz.guess=false;if(quiz.idx>=quiz.queue.length)clearReviewSession();renderQuiz();}
+function quizPrev(){if(quiz.idx>0){quiz.idx--;quiz.sel=[];quiz.strike=[];quiz.submitted=false;quiz.guess=false;renderQuiz();}}
 function toggleGuess(){if(quiz.submitted)return;quiz.guess=!quiz.guess;renderQuiz();}
 
 /* =================== PLAN（规划看板：倒计时 / 目标 / 日历） =================== */
@@ -4848,6 +4894,10 @@ function scoreTotalHtml(p){
     ].filter(Boolean)
   });
   const avg=data.length?Math.round(data.reduce((a,b)=>a+b.total,0)/data.length*10)/10:null;
+  // 预测平均分：把已经登记过分数的各科目平均分直接相加（无记录的科目跳过，即「前面几门科目」）
+  let predicted=null;
+  planSubjects(p).forEach(s=>{const a=subjStat(p,s.id).avg; if(a!=null)predicted=(predicted==null?0:predicted)+a;});
+  if(predicted!=null)predicted=Math.round(predicted*10)/10;
   const hasPaper=planTests(p).some(t=>t.paper&&t.paper.trim());
   return `<div class="score-sec"><div class="ph score-total-head">📈 总分趋势
       <div class="score-total-ctrls">
@@ -4858,6 +4908,7 @@ function scoreTotalHtml(p){
     <div class="score-stats">
       <div class="st"><div class="n">${data.length}</div><div class="l">已汇总卷次</div></div>
       <div class="st"><div class="n">${avg==null?'—':avg}</div><div class="l">总分平均</div></div>
+      <div class="st"><div class="n">${predicted==null?'—':predicted}</div><div class="l">预测平均分</div></div>
       ${p.totalTarget!=null&&p.totalTarget!==''?`<div class="st"><div class="n">${p.totalTarget}</div><div class="l">总分目标</div></div>`:''}
       ${p.totalPass!=null&&p.totalPass!==''?`<div class="st"><div class="n">${p.totalPass}</div><div class="l">总分及格</div></div>`:''}
     </div>
@@ -5071,7 +5122,7 @@ function sprintStudy(){
 function sprintQuiz(){
   const qs=sprintQuizQs();
   if(!qs.length){toast('冲刺清单里没有可刷的题目');return;}
-  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'sprint',types:null,sel:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true};
+  quiz={deckId:'__all__',queue:qs.slice(),idx:0,mode:'sequential',range:'sprint',types:null,sel:[],strike:[],submitted:false,guess:false,rGuess:0,rLucky:0,shuffle:defaultShuffle(),orders:{},global:true};
   go('quiz');renderQuiz();
 }
 /* 打印纸质背诵清单（导出 PDF：调起打印对话框 → 选择「另存为 PDF」） */
