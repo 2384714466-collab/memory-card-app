@@ -502,6 +502,7 @@
   /* ===== 规划看板 ===== */
   .plan-sec{margin-bottom:18px}
   .plan-sec .ph{font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;margin:4px 2px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .plan-sec .ph .ph-acts{display:flex;align-items:center;gap:6px}
   .plan-sec .ph .btn-sm{padding:4px 10px;font-size:12px;text-transform:none;letter-spacing:0}
   .plan-empty{color:var(--text-3);font-size:13px;text-align:center;padding:18px 0}
   /* 倒计时 */
@@ -617,7 +618,9 @@
   .score-chart svg circle{cursor:pointer;transition:opacity .12s}
   .score-chart svg circle:hover{opacity:.75}
   .score-tip{position:fixed;transform:translate(-50%,-100%);background:#1e293b;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;pointer-events:none;z-index:99999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);animation:scoreTipIn .15s ease}
-  .score-tip::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
+  .score-tip::after{content:'';position:absolute;bottom:-4px;left:var(--arrow,50%);transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
+  /* 上方空间不足时改浮在数据点下方，箭头翻到顶部 */
+  .score-tip.below::after{bottom:auto;top:-4px;border-top-color:transparent;border-bottom-color:#1e293b}
   @keyframes scoreTipIn{from{opacity:0;transform:translate(-50%,-90%)}to{opacity:1;transform:translate(-50%,-100%)}}
   .total-toggle{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;flex-wrap:wrap}
   .total-toggle .sw{position:relative;width:42px;height:24px;border-radius:20px;background:#cbd5e1;cursor:pointer;transition:.15s;flex-shrink:0}
@@ -632,13 +635,25 @@
   .test-row .t-score{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
   .test-row .t-note{color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
   .score-empty{text-align:center;color:var(--text-3);font-size:14px;padding:24px 0}
-  /* 总分趋势标题与开关同一行；更紧凑的开关 */
+  /* 总分明细：每卷一行，显示「100（英语）＋120（数学）＝220（总分）」 */
+  .paper-list{display:flex;flex-direction:column;gap:10px}
+  .paper-row{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);padding:12px 14px}
+  .paper-row .pp-name{font-weight:800;font-size:15px;margin-bottom:6px;word-break:break-all}
+  .paper-row .pp-date{font-size:12px;color:var(--text-3);font-weight:600;margin-left:6px;white-space:nowrap}
+  .paper-row .pp-expr{font-size:14px;line-height:1.9;color:var(--text-2);word-break:break-all}
+  .paper-row .pp-expr b{color:var(--text)}
+  .paper-row .pp-expr .pp-eq{color:var(--text-3);margin:0 2px}
+  .paper-row .pp-expr .pp-sum{font-weight:800;color:var(--primary)}
+  .total-more{margin-top:10px;font-size:12px;color:var(--primary);font-weight:600;text-align:right;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  /* 科目管理弹窗 */
+  .sm-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:46vh;overflow:auto}
+  .sm-row{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+  .sm-row .sm-name{flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sm-row .sm-acts{display:flex;gap:6px;flex-shrink:0}
+  /* 总分趋势标题与操作按钮同一行 */
   .score-total-head{margin-bottom:12px}
-  .score-total-head .btn{text-transform:none;letter-spacing:0}
+  .score-total-head .btn{text-transform:none;letter-spacing:0;padding:3px 9px;font-size:12px;line-height:1.4}
   .score-total-ctrls{display:flex;align-items:center;gap:10px;flex-shrink:0}
-  .sw.sm{position:relative;width:34px;height:20px;border-radius:20px;background:#cbd5e1;cursor:pointer;transition:.15s;flex-shrink:0}
-  .sw.sm::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
-  .sw.sm.on{background:var(--primary)}
   .sw.sm.on::after{left:16px}
   /* 科目卡：单击进入详情 */
   .subj-card.clickable{cursor:pointer;transition:box-shadow .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
@@ -684,8 +699,10 @@
   .fav-sec-h{font-size:14px;font-weight:800;margin:14px 2px 8px;color:var(--text-1)}
   .fav-list{display:flex;flex-direction:column;gap:8px}
   .fav-deck{font-size:11px;color:var(--text-3);margin-top:4px}
-  .btn.fav-on{color:#f59e0b;border-color:#fcd34d;background:#fffbeb}
+  .btn.fav-on{color:#f59e0b;border:1px solid #fcd34d;background:#fffbeb}
   .btn.fav-on.on,.btn.fav-on:hover{color:#d97706}
+  /* 收藏列表右侧动作键：背/刷只留图标，三个键统一尺寸 */
+  .fav-list .li-actions .btn{width:40px;height:34px;padding:0;font-size:16px}
   .fb-fav{margin-left:auto;font-size:18px;background:var(--primary-light);border:none;cursor:pointer;color:var(--primary-dark);padding:6px 10px;border-radius:10px}
   .fb-fav.on{background:#fef3c7;color:#b45309}
   .btns-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -940,6 +957,7 @@
 
     <!-- ============ PLAN ============ -->
     <div class="view" id="view-plan"></div>
+    <div class="view" id="view-plan-archive"></div>
 
     <!-- ============ DIAGNOSIS ============ -->
     <div class="view" id="view-diagnosis"></div>
@@ -947,6 +965,7 @@
     <!-- ============ SCORE（分数登记） ============ -->
     <div class="view" id="view-score"></div>
     <div class="view" id="view-score-subject"></div>
+    <div class="view" id="view-score-total"></div>
   </div>
 </div>
 
@@ -2212,9 +2231,11 @@ function go(view,record=true){
   if(view==='import')renderImport();
   if(view==='detail')renderDetail();
   if(view==='plan')renderPlan();
+  if(view==='plan-archive')renderPlanArchive();
   if(view==='diagnosis')renderDiagnosis();
   if(view==='score')renderScorePlan();
   if(view==='score-subject')renderScoreSubject();
+  if(view==='score-total')renderScoreTotal();
   window.scrollTo(0,viewScroll[view]||0);                // 渲染后恢复目标视图滚动位置
 }
 /* 软件内部「返回 / 退出」键：与手机系统返回键走同一条路径，保证一致 */
@@ -3742,6 +3763,7 @@ function renderStudy(){
   const q=studyState.queue;
   if(studyState.idx>=q.length){
     if(isGlobal && studyState.afterWrong && studyState.afterWrong.length){
+      if(studyState.favChain){startGlobalQuiz(studyState.afterWrong,false);return;} // 收藏复习：卡片背完自动接刷题
       v.innerHTML=`<div class="empty" style="padding:80px 20px"><div class="em">🃏</div>
         <div style="font-size:18px;font-weight:800;margin-bottom:6px">卡片复习完成！</div>
         <div class="muted">接下来进入错题刷题（${studyState.afterWrong.length} 题）</div>
@@ -4490,8 +4512,8 @@ function daysUntil(s){          // s:'YYYY-MM-DD'，与 todayKey() 同用 UTC �
   const n=new Date();const todayUtc=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate());
   return Math.round((target-todayUtc)/86400000);
 }
-/* —— 多备考计划：每日目标 = 所有计划 cards / quiz 之和 —— */
-function planSum(kind){let s=0;(DB.meta.plans||[]).forEach(p=>{s+=((p&&p[kind])||0);});return s;} // kind:'cards'|'quiz'
+/* —— 多备考计划：每日目标 = 进行中计划 cards / quiz 之和（已归档的结束计划不计入） —— */
+function planSum(kind){let s=0;(DB.meta.plans||[]).forEach(p=>{if(isPlanEnded(p))return;s+=((p&&p[kind])||0);});return s;} // kind:'cards'|'quiz'
 function todayBase(kind){return planSum(kind);}
 function todayBuffer(kind){const b=DB.meta.backlog||{cards:0,quiz:0};return Math.max(0,b[kind]||0);}
 function todayTarget(kind){return todayBase(kind)+todayBuffer(kind);}
@@ -4532,6 +4554,10 @@ function planGoalLabel(p){
 /* 计划按日期升序（无日期排最后） */
 function planListSorted(){return (DB.meta.plans||[]).slice().sort((a,b)=>{
   if(!a.date&&!b.date)return 0;if(!a.date)return 1;if(!b.date)return -1;return a.date<b.date?-1:1;});}
+/* 已结束（到期）计划：日期已过即自动进归档夹，不再占用进行中列表与每日目标 */
+function isPlanEnded(p){return !!(p&&p.date&&daysUntil(p.date)<0);}
+function activePlans(){return planListSorted().filter(p=>!isPlanEnded(p));}
+function archivedPlans(){return planListSorted().filter(isPlanEnded);}
 /* 当前连续打卡覆盖到的日期集合（从最近活跃日向前连续） */
 function streakDates(){
   const set=new Set();let key=DB.meta.lastStudy;
@@ -4547,7 +4573,7 @@ function streakDates(){
 /* 首页规划速览卡片 */
 function renderHomePlan(){
   const el=document.getElementById('plan-home');if(!el)return;
-  const plans=planListSorted();let html='';
+  const plans=activePlans();let html='';
   if(plans.length){
     const p=plans[0],days=p.date?daysUntil(p.date):null;
     const cls=days===null?'':(days<0?'soon':(days<=30?'near':''));
@@ -4566,14 +4592,15 @@ function renderHomePlan(){
   }
   el.innerHTML=html;
 }
-/* 备考计划区块（规划页，列出全部计划，相互独立） */
+/* 备考计划区块（规划页，列出进行中的计划；已结束的自动进归档夹） */
 function planListHtml(){
-  const plans=planListSorted();
-  if(!plans.length)return `<div class="plan-empty">还没有备考计划 📝 点「＋ 添加计划」同时设定多套目标（期末 / 二轮复盘 / 考研初试），首页会显示最近倒计时</div>`;
+  const plans=activePlans();
+  const archN=archivedPlans().length;
+  if(!plans.length)return `<div class="plan-empty">${archN?`进行中的备考计划都在归档夹里（${archN} 套已结束）。`:'还没有备考计划 📝'} 点「＋ 添加」同时设定多套目标（期末 / 二轮复盘 / 考研初试），首页会显示最近倒计时</div>`;
   return `<div class="cd-grid">`+plans.map(p=>{
     const days=p.date?daysUntil(p.date):null;
-    const cls=days===null?'':(days<0?'soon':(days<=30?'near':''));
-    const num=days===null?'∞':(days<0?'已结束':days);
+    const cls=days===null?'':(days<=30?'near':'');
+    const num=days===null?'∞':days;
     return `<div class="cd-card ${cls}">
       <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
       <div class="cd-num">${num}<small>天</small></div>
@@ -4627,11 +4654,40 @@ function planSelectDate(key){planSelDate=key;renderPlan();}
 function renderPlan(){
   const v=document.getElementById('view-plan');
   if(!v)return;
-  const plans=DB.meta.plans||[];
+  const plans=activePlans();
+  const archN=archivedPlans().length;
   const head=plans.length>1?`📅 备考计划（${plans.length} 套）`:`📅 备考计划`;
   v.innerHTML=
-    `<div class="plan-sec"><div class="ph">${head} <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加计划</button></div>${planListHtml()}</div>`+
+    `<div class="plan-sec"><div class="ph">${head}
+      <span class="ph-acts"><button class="btn btn-ghost btn-sm" onclick="goPlanArchive()" title="已结束的备考计划">🗂 归档夹${archN?'（'+archN+'）':''}</button>
+      <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加</button></span></div>${planListHtml()}</div>`+
     `<div class="plan-sec"><div class="ph">📆 学习日历</div>${calendarHtml()}</div>`;
+}
+/* —— 归档夹：日期已结束的备考计划自动进入，可编辑日期恢复或删除 —— */
+function goPlanArchive(){go('plan-archive');}
+function renderPlanArchive(){
+  const v=document.getElementById('view-plan-archive');if(!v)return;
+  const list=archivedPlans();
+  let html=`<div class="plan-sec"><div class="score-head">
+      <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
+      <h2>🗂 归档夹</h2>
+      <button class="btn btn-primary btn-sm" onclick="openPlanModal()">＋ 添加</button>
+    </div>`;
+  if(!list.length){
+    html+=`<div class="plan-empty">还没有已结束的备考计划。<br>计划的截止日期一过，就会自动收进这里。</div>`;
+  }else{
+    html+=`<div class="cd-grid">`+list.map(p=>{
+      return `<div class="cd-card soon">
+        <span class="plan-dot" style="background:${esc(p.color||'#6366f1')}"></span>
+        <div class="cd-num" style="font-size:15px">已结束</div>
+        <div class="cd-info"><div class="cd-name">${esc(p.name)}</div><div class="cd-date">${esc(p.date)} · ${planGoalLabel(p)}</div></div>
+        <div class="cd-acts"><button class="btn btn-ghost btn-xs" onclick="goToScore('${p.id}')" title="分数登记与可视化">📊</button>
+          <button class="btn btn-ghost btn-xs" onclick="openPlanModal('${p.id}')" title="改日期即可恢复进行中">✏️</button>
+          <button class="btn btn-danger btn-xs" onclick="delPlan('${p.id}')">🗑</button></div></div>`;
+    }).join('')+`</div>`;
+  }
+  html+=`</div>`;
+  v.innerHTML=html;
 }
 /* 备考计划增删改（多套独立计划） */
 function openPlanModal(id){
@@ -4671,7 +4727,7 @@ function savePlan(){
 function delPlan(id){DB.meta.plans=(DB.meta.plans||[]).filter(x=>x.id!==id);save();hideModal();settleBuffer();renderPlan();renderHome();toast('已删除');}
 /* ============================================================
    分数登记模块（备考专项计划）：自定义科目 + 每次测试登记（科目/日期/分数）
-   + 每科平均分/目标/及格/次数/趋势图 + 可选「总分趋势」（按考卷序号汇总各科目）
+   + 每科平均分/目标/及格/次数/趋势图 + 「总分趋势」（按考卷序号汇总各科目）
    数据挂在 plan 上：p.subjects=[{id,name,pass,target,full}]，p.tests=[{id,subjectId,date,score,note,paper}]
    ============================================================ */
 function scorePlan(id){return (DB.meta.plans||[]).find(p=>String(p.id)===String(id));}
@@ -4684,27 +4740,55 @@ function subjStat(p,sid){
   const sum=ts.reduce((a,b)=>a+b,0);
   return {count:ts.length,avg:sum/ts.length,max:Math.max(...ts),min:Math.min(...ts)};
 }
+/* 预测平均分：各科「有成绩用平均分，没成绩但有默认分用默认分」直接相加 */
+function predictedTotal(p){
+  let sum=null;
+  planSubjects(p).forEach(s=>{
+    const a=subjStat(p,s.id).avg;
+    const v=(a!=null)?a:((s.def!=null&&s.def!==''&&!isNaN(+s.def))?+s.def:null);
+    if(v!=null)sum=(sum==null?0:sum)+v;
+  });
+  return sum==null?null:Math.round(sum*10)/10;
+}
 /* 总分趋势：按考卷序号（如「2024年1卷」）汇总同卷各科目测试分（同理「同卷三门科目相加」）。
    仅当全部科目都存在该考卷序号的记录时才汇总该卷——少一门都不出总分点，避免缺科总分被误读为骤降；
    已删除科目的历史记录不参与汇总 */
 function totalByPaper(p){
-  const subIds=planSubjects(p).map(s=>String(s.id));
+  const subs=planSubjects(p);
+  const subIds=subs.map(s=>String(s.id));
   const need=subIds.length;
   if(!need)return [];
   const set=new Set(subIds);
+  // 默认分：设了默认分的科目即使没考过，也按默认分计入（如六级作文默认 120）
+  const defMap={};
+  subs.forEach(s=>{if(s.def!=null&&s.def!==''&&!isNaN(+s.def))defMap[String(s.id)]=+s.def;});
   const map={};
   planTests(p).forEach(t=>{
     const key=t.paper&&t.paper.trim(); if(!key)return;            // 未填考卷序号的记录不计入总分趋势
     if(!set.has(String(t.subjectId)))return;                      // 已删科目：不参与「集齐」判断也不计分
-    if(!map[key])map[key]={paper:key,total:0,subjects:{},_min:null};
-    map[key].total+=(+t.score||0);
-    map[key].subjects[String(t.subjectId)]=true;
+    if(!map[key])map[key]={paper:key,scores:{},dates:[],_min:null};
+    const sc=(+t.score||0);
+    const sid=String(t.subjectId);
+    map[key].scores[sid]=(map[key].scores[sid]||0)+sc;           // 同科同卷多次：相加（用于明细「x门分数相加」）
+    if(t.date)map[key].dates.push(t.date);
     if(t.date&&(map[key]._min===null||t.date<map[key]._min))map[key]._min=t.date;
   });
   return Object.keys(map).map(k=>{
       const o=map[k];
-      if(Object.keys(o.subjects).length<need)return null;         // 科目未集齐：该卷不汇总
-      const r={paper:o.paper,total:Math.round(o.total*100)/100};if(o._min)r._min=o._min;return r;})
+      let total=0,ok=true;const items=[];
+      for(const s of subs){
+        const sid=String(s.id);
+        if(o.scores[sid]!=null){                                  // 有该卷的考试记录：用真实分
+          const v=Math.round((o.scores[sid]||0)*100)/100;
+          items.push({id:sid,name:s.name,score:v,isDef:false});total+=v;
+        }else if(defMap[sid]!=null){                              // 没考过但有默认分：按默认分计入
+          items.push({id:sid,name:s.name,score:defMap[sid],isDef:true});total+=defMap[sid];
+        }else{ok=false;break;}                                    // 既没考过也没默认分：该卷不汇总
+      }
+      if(!ok)return null;
+      const r={paper:o.paper,total:Math.round(total*100)/100,items:items};
+      r._dates=o.dates.slice().sort();
+      if(o._min)r._min=o._min;return r;})
     .filter(Boolean)
     .sort((a,b)=>(a._min&&b._min)?(a._min<b._min?-1:1):(a.paper<b.paper?-1:1));
 }
@@ -4730,9 +4814,19 @@ function showScoreTip(el){
   const rect=el.getBoundingClientRect();
   const tip=document.createElement('div');
   tip.id='score-tip';tip.className='score-tip';tip.textContent=text;
-  tip.style.left=(rect.left+rect.width/2)+'px';
-  tip.style.top=(rect.top-6)+'px';
   document.body.appendChild(tip);
+  /* 按视口夹取位置：靠边的点若照旧居中会把提示挤出屏幕（表现为「点了没反应」），
+     上方放不下时改浮到点下方 */
+  const tw=tip.offsetWidth, th=tip.offsetHeight, M=8;
+  const dotX=rect.left+rect.width/2, half=tw/2;
+  const minL=M+half, maxL=window.innerWidth-M-half;
+  const left=maxL<minL?window.innerWidth/2:Math.max(minL,Math.min(maxL,dotX));
+  let below=false, top=rect.top-6;                 // 默认浮在点上方（transform -100%，top 即下边缘）
+  if(top-th<M){below=true;top=rect.bottom+6+th;}  // 上方不够则翻到下方
+  tip.classList.toggle('below',below);
+  tip.style.setProperty('--arrow',Math.max(10,Math.min(tw-10,dotX-(left-half)))+'px');
+  tip.style.left=left+'px';
+  tip.style.top=top+'px';
   _scoreTipTimer=setTimeout(hideScoreTip,3000);
 }
 /* 悬浮分数自动收起：点空白（pointerdown 落点非数据点）、滚轮、触摸滑动、任意按键、滚动（捕获阶段，覆盖页面与内部容器） */
@@ -4783,7 +4877,10 @@ function scoreLineChart(o){
     const val=+v.y;
     const dotColor=(passY!=null&&val<passY)?'#ef4444':(targetY!=null&&val>=targetY)?'#22c55e':baseColor;
     const tip=String(val)+'分'+(v.label?' · '+v.label:'');
-    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(val).toFixed(1)}" r="4" fill="${dotColor}" stroke="#fff" stroke-width="1.5" data-tip="${esc(tip)}" onclick="showScoreTip(this)" style="cursor:pointer"/>`;
+    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(val).toFixed(1)}" r="4" fill="${dotColor}" stroke="#fff" stroke-width="1.5" pointer-events="none"/>`;
+    /* 透明大热区（叠在上层）：手机上 4px 圆点太难点中，扩到相邻点间距的一半（上限 11px） */
+    const hitR=Math.max(5,Math.min(11,(vals.length>1?(X(1)-X(0)):40)/2));
+    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(val).toFixed(1)}" r="${hitR.toFixed(1)}" fill="transparent" data-tip="${esc(tip)}" onclick="showScoreTip(this)" style="cursor:pointer"/>`;
     if(v.label&&showLabel(i))dots+=`<text x="${X(i).toFixed(1)}" y="${h-7}" text-anchor="middle" font-size="9" fill="#64748b">${esc(v.label)}</text>`; });
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${g}${refs}
     <polyline points="${ptsStr}" fill="none" stroke="${o.color||'#6366f1'}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
@@ -4795,19 +4892,21 @@ function renderScorePlan(){
   const p=scorePlan(window.__scorePlanId);
   if(!p){ go('plan'); return; }
   const subjects=planSubjects(p), tests=planTests(p);
+  // 默认分科目（如作文 120）不在分数页显示卡片，统一在总分趋势的「编辑」里管理
+  const realSubjects=subjects.filter(s=>!(s.def!=null&&s.def!==''));
   const planDays=p.date?daysUntil(p.date):null;
   let html=`<div class="score-sec"><div class="score-head">
       <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
       <h2>${esc(p.name)} 分数登记</h2>
       <button class="btn btn-primary btn-sm" onclick="openSubjectModal()">＋ 科目</button>
-      <button class="btn btn-outline btn-sm" onclick="openTestModal()" ${subjects.length?'':'disabled style="opacity:.5"'} title="${subjects.length?'登记一次测试':'请先添加科目'}">＋ 登记</button>
+      <button class="btn btn-outline btn-sm" onclick="openTestModal()" ${realSubjects.length?'':'disabled style="opacity:.5"'} title="${realSubjects.length?'登记一次测试':'请先添加科目'}">＋ 登记</button>
     </div>`;
-  if(p.date)html+=`<div class="muted" style="font-size:12px;margin:-6px 2px 12px">📅 距考试 ${planDays<0?'已结束':planDays+' 天'}（${esc(p.date)}）· 共 <b>${subjects.length}</b> 门科目，<b>${tests.length}</b> 条测试记录</div>`;
+  if(p.date)html+=`<div class="muted" style="font-size:12px;margin:-6px 2px 12px">📅 距考试 ${planDays<0?'已结束':planDays+' 天'}（${esc(p.date)}）· 共 <b>${realSubjects.length}</b> 门科目，<b>${tests.length}</b> 条测试记录</div>`;
   html+=`</div>`;
-  if(!subjects.length){
-    html+=`<div class="score-sec"><div class="score-empty">还没有科目。点「＋ 科目」添加，例如初会：实务 / 经济法；考研：数学 / 英语 / 专业课。</div></div>`;
+  if(!realSubjects.length){
+    html+=`<div class="score-sec"><div class="score-empty">还没有科目。点「＋ 科目」添加。</div></div>`;
   }else{
-    html+=subjects.map(s=>scoreSubjectHtml(p,s)).join('');
+    html+=realSubjects.map(s=>scoreSubjectHtml(p,s)).join('');
   }
   html+=scoreTotalHtml(p);
   html+=scoreTestListHtml(p);
@@ -4879,10 +4978,6 @@ function scoreSubjectHtml(p,s){
     </div></div>`;
 }
 function scoreTotalHtml(p){
-  if(!p.combineTotal){
-    return `<div class="score-sec"><div class="ph score-total-head">📈 总分趋势
-      <div class="sw sm" onclick="toggleCombineTotal()" title="开启总分趋势"></div></div></div>`;
-  }
   const data=totalByPaper(p);
   const chart=scoreLineChart({
     w:pcWide()?1000:340,h:170,
@@ -4894,17 +4989,11 @@ function scoreTotalHtml(p){
     ].filter(Boolean)
   });
   const avg=data.length?Math.round(data.reduce((a,b)=>a+b.total,0)/data.length*10)/10:null;
-  // 预测平均分：把已经登记过分数的各科目平均分直接相加（无记录的科目跳过，即「前面几门科目」）
-  let predicted=null;
-  planSubjects(p).forEach(s=>{const a=subjStat(p,s.id).avg; if(a!=null)predicted=(predicted==null?0:predicted)+a;});
-  if(predicted!=null)predicted=Math.round(predicted*10)/10;
-  const hasPaper=planTests(p).some(t=>t.paper&&t.paper.trim());
-  return `<div class="score-sec"><div class="ph score-total-head">📈 总分趋势
+  const predicted=predictedTotal(p);
+  return `<div class="score-sec"><div class="subj-card"><div class="ph score-total-head" style="margin:0 0 12px">📈 总分趋势
       <div class="score-total-ctrls">
         <button class="btn btn-ghost btn-sm" onclick="editTotalTarget()">⚙ 目标/及格</button>
-        <div class="sw sm on" onclick="toggleCombineTotal()" title="关闭总分趋势"></div>
       </div></div>
-    ${!hasPaper?'<div class="sg-warn" style="margin-bottom:10px">还没记录任何「考卷序号」。在登记时填写如「2024年1卷」，开启本开关后会自动把同卷各科分数汇总成总分趋势。</div>':''}
     <div class="score-stats">
       <div class="st"><div class="n">${data.length}</div><div class="l">已汇总卷次</div></div>
       <div class="st"><div class="n">${avg==null?'—':avg}</div><div class="l">总分平均</div></div>
@@ -4913,7 +5002,47 @@ function scoreTotalHtml(p){
       ${p.totalPass!=null&&p.totalPass!==''?`<div class="st"><div class="n">${p.totalPass}</div><div class="l">总分及格</div></div>`:''}
     </div>
     <div class="score-chart">${chart}</div>
-  </div>`;
+    <div class="total-more" onclick="goToScoreTotal('${p.id}')">查看详细记录 →</div>
+  </div></div>`;
+}
+/* —— 总分趋势「查看详细记录」：按考卷序号列出各科目分项分，并展示相加＝汇总分 —— */
+function goToScoreTotal(planId){ window.__scorePlanId=String(planId); go('score-total'); }
+function fmtScoreNum(n){ const r=Math.round((+n||0)*100)/100; return Number.isInteger(r)?String(r):String(r); }
+function renderScoreTotal(){
+  const v=document.getElementById('view-score-total'); if(!v)return;
+  const p=scorePlan(window.__scorePlanId);
+  if(!p){ go('plan'); return; }
+  const data=totalByPaper(p);
+  const avg=data.length?Math.round(data.reduce((a,b)=>a+b.total,0)/data.length*10)/10:null;
+  const predicted=predictedTotal(p);
+  let html=`<div class="score-sec"><div class="score-head">
+      <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
+      <h2>总分记录</h2>
+      <button class="btn btn-outline btn-sm" onclick="openSubjectManage()">✏️ 编辑</button>
+    </div>`;
+  html+=`<div class="score-stats">
+      <div class="st"><div class="n">${data.length}</div><div class="l">已汇总卷次</div></div>
+      <div class="st"><div class="n">${avg==null?'—':avg}</div><div class="l">总分平均</div></div>
+      <div class="st"><div class="n">${predicted==null?'—':predicted}</div><div class="l">预测平均分</div></div>
+      ${p.totalTarget!=null&&p.totalTarget!==''?`<div class="st"><div class="n">${p.totalTarget}</div><div class="l">总分目标</div></div>`:''}
+      ${p.totalPass!=null&&p.totalPass!==''?`<div class="st"><div class="n">${p.totalPass}</div><div class="l">总分及格</div></div>`:''}
+    </div>`;
+  if(!data.length){
+    html+=`<div class="score-empty">还没有已汇总的考卷。<br>需要计划内 <b>全部科目</b> 都登记了同一个「考卷序号」才会汇总。<br>登记时把考卷序号填成一致即可，如「2024年1卷」。</div>`;
+  }else{
+    html+=`<div style="margin-top:14px"><div class="ph">🧾 已汇总卷次明细</div>
+      <div class="paper-list">${data.map(d=>{
+        const expr=d.items.map(it=>`<b>${fmtScoreNum(it.score)}</b>（${esc(it.name)}）`).join('<span class="pp-eq">＋</span>')
+          +`<span class="pp-eq">＝</span><span class="pp-sum">${fmtScoreNum(d.total)}</span>`;
+        const dt=(d._dates&&d._dates.length)?d._dates[0]:'';
+        return `<div class="paper-row">
+          <div class="pp-name">${esc(d.paper)}${dt?`<span class="pp-date">${esc(dt)}</span>`:''}</div>
+          <div class="pp-expr">${expr}</div>
+        </div>`;
+      }).join('')}</div></div>`;
+  }
+  html+=`</div>`;
+  v.innerHTML=html;
 }
 function scoreTestListHtml(p){
   const ts=planTests(p).slice().sort((a,b)=>a.date<b.date?1:-1);
@@ -4933,7 +5062,9 @@ function scoreTestListHtml(p){
 }
 /* —— 分数相关保存后的实时刷新：身处单科详情页时刷单科页，否则刷分数页（避免「保存后要退出重进才更新」） —— */
 function refreshScoreViews(){
-  if(activeView()==='score-subject')renderScoreSubject();
+  const av=activeView();
+  if(av==='score-subject')renderScoreSubject();
+  else if(av==='score-total')renderScoreTotal();
   else renderScorePlan();
 }
 /* —— 科目增删改 —— */
@@ -4968,6 +5099,58 @@ function saveSubject(){
   if(window.__subjId){const s=p.subjects.find(x=>String(x.id)===String(window.__subjId));if(s){s.name=name;s.pass=isNaN(pass)?null:pass;s.target=isNaN(target)?null:target;s.full=isNaN(full)?null:full;}}
   else p.subjects.push({id:uid(),name,pass:isNaN(pass)?null:pass,target:isNaN(target)?null:target,full:isNaN(full)?null:full});
   save();hideModal();refreshScoreViews();toast('已保存');
+}
+/* —— 科目管理（从总分记录页的「编辑」进入）：这里的「添加科目」即默认分科目，只填名称+默认分 —— */
+function openSubjectManage(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  // 这里只管「默认分科目」；有考试记录的真实科目在分数页管理
+  const subs=planSubjects(p).filter(s=>s.def!=null&&s.def!=='');
+  const rows=subs.length?subs.map(s=>`
+      <div class="sm-row">
+        <div class="sm-name">📘 ${esc(s.name)}</div>
+        <div class="sm-acts">
+          <button class="btn btn-outline btn-xs" onclick="openDefSubjectModal('${s.id}')">编辑</button>
+          <button class="btn btn-danger btn-xs" onclick="delDefSubject('${s.id}')">删除</button>
+        </div>
+      </div>`).join(''):'<div class="muted" style="font-size:13px">还没有默认分科目，点下方「＋ 添加科目」。</div>';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">✏️ 默认分科目</div>
+    <div class="sm-list">${rows}</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="hideModal()">关闭</button>
+      <button class="btn btn-primary" onclick="openDefSubjectModal(null)">＋ 添加科目</button>
+    </div>`;
+  showModal();
+}
+/* —— 默认分科目表单：仅「科目名 + 默认分」两个字段 —— */
+function openDefSubjectModal(id){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const s=id?planSubjects(p).find(x=>String(x.id)===String(id)):null;
+  window.__subjId=id||null;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">${s?'✏️ 编辑默认分科目':'📘 添加默认分科目'}</div>
+    <div class="pv-field"><label>科目名称</label><input type="text" id="subj-name" value="${esc(s?s.name:'')}" placeholder="如：作文 / 翻译"></div>
+    <div class="pv-field"><label>默认分</label><input type="number" id="def-subj-score" min="0" placeholder="如 120" value="${s&&s.def!=null?s.def:''}"></div>
+    <div class="muted" style="font-size:12px;margin:0 0 12px">该科目无需登记考试：总分趋势每卷都按「默认分」计入。</div>
+    <div class="modal-actions">
+      ${s?`<button class="btn btn-danger" onclick="delDefSubject('${s.id}')">删除</button>`:''}
+      <button class="btn btn-ghost" onclick="openSubjectManage()">取消</button>
+      <button class="btn btn-primary" onclick="saveDefSubject()">保存</button>
+    </div>`;
+  showModal();
+}
+/* 在默认分科目列表/表单里删除：删完回到列表（普通科目表单里删除仍直接关弹窗） */
+function delDefSubject(id){ delSubject(id); openSubjectManage(); }
+function saveDefSubject(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const name=document.getElementById('subj-name').value.trim();
+  if(!name){toast('请填写科目名称');return;}
+  const def=parseFloat(document.getElementById('def-subj-score').value);
+  if(isNaN(def)){toast('请填写默认分');return;}
+  p.subjects=p.subjects||[];
+  if(window.__subjId){const s=p.subjects.find(x=>String(x.id)===String(window.__subjId));if(s){s.name=name;s.def=def;}}
+  else p.subjects.push({id:uid(),name,def});
+  save();toast('已保存');refreshScoreViews();openSubjectManage();
 }
 function delSubject(id){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
@@ -5024,12 +5207,7 @@ function delTest(id){
   p.tests=p.tests.filter(x=>String(x.id)!==String(id));
   save();hideModal();refreshScoreViews();toast('已删除');
 }
-/* —— 总分趋势开关 + 总分目标/及格 —— */
-function toggleCombineTotal(){
-  const p=scorePlan(window.__scorePlanId); if(!p)return;
-  p.combineTotal=!p.combineTotal; save(); refreshScoreViews();
-  toast(p.combineTotal?'已开启总分趋势':'已关闭总分趋势');
-}
+/* —— 总分目标/及格 —— */
 function editTotalTarget(){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
   document.getElementById('modal-body').innerHTML=`
@@ -5634,9 +5812,12 @@ function startFavStudy(){
   const f=collectFav();
   const cards=f.cards.map(x=>x.c).filter(c=>!isCardEmpty(c)),qs=f.questions.map(x=>x.q);
   if(!cards.length && !qs.length){toast('收藏夹还是空的，去卡片或题目上点 ☆ 收藏吧');return;}
-  cards.sort(()=>Math.random()-0.5);
-  studyState={deckId:'__fav__',queue:cards,idx:0,flipped:false,mode:'all',global:true,afterWrong:qs,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false};
   updateStreak();
+  // 只有收藏题目：直接进刷题，不再走一遍空的卡片阶段
+  if(!cards.length){startGlobalQuiz(qs,false);return;}
+  cards.sort(()=>Math.random()-0.5);
+  // favChain：卡片背完自动接着刷收藏题目，连成一整轮（不再停在「继续刷题」的中间页）
+  studyState={deckId:'__fav__',queue:cards,idx:0,flipped:false,mode:'all',global:true,afterWrong:qs,favChain:true,display:'flip',reveal:0,selfAns:'',selfRes:null,noteOpen:false};
   go('study');renderStudy();
 }
 function toggleFav(kind,id,btn){
@@ -5660,7 +5841,7 @@ function renderFav(){
   const f=collectFav();const n=f.cards.length+f.questions.length;
   let html=`<div class="row between" style="margin-bottom:10px">
     <div class="section-title" style="margin:0">⭐ 收藏夹</div>
-    <button class="btn btn-primary btn-sm" onclick="startFavStudy()" ${n?'':'disabled'}>🎯 开始收藏复习${n?'（'+n+'）':''}</button></div>`;
+    <button class="btn btn-primary btn-sm" onclick="startFavStudy()" ${n?'':'disabled'}>▶ 开始复习${n?'（'+n+'）':''}</button></div>`;
   if(!n){
     html+=`<div class="empty"><div class="em">⭐</div>收藏夹是空的
       <div class="muted" style="margin-top:8px;font-size:13px">在卡片、题目、编辑弹窗或搜索结果里点 <b>☆</b> 即可把高频必考知识点收进这里，考前快速过一遍核心考点。</div></div>`;
@@ -5671,7 +5852,7 @@ function renderFav(){
       f.cards.map(({d,c})=>`<div class="li">
         <div class="lt"><div class="a">${toRich(c.front)}</div><div class="b">${toRich(c.back)}</div>
           ${tagBadges(c,d.id)}<div class="fav-deck">📁 ${esc(d.name)}</div></div>
-        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startStudy('${d.id}',deckStudyCfg(getDeck('${d.id}')))">🃏 背</button>
+        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startStudy('${d.id}',deckStudyCfg(getDeck('${d.id}')))" title="背诵">🃏</button>
           <button class="btn fav-on btn-sm" onclick="toggleFav('card','${c.id}',this)" title="取消收藏">⭐</button></div></div>`).join('')+`</div>`;
   }
   if(f.questions.length){
@@ -5679,7 +5860,7 @@ function renderFav(){
       f.questions.map(({d,q})=>`<div class="li">
         <div class="lt"><div class="a"><span class="badge ${TYPE_BADGE[q.type]}">${TYPE_LABEL[q.type]}</span> ${esc(q.question)}</div>
           <div class="fav-deck">📁 ${esc(d.name)}</div></div>
-        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startQuiz('${d.id}',{range:'all',types:null,order:'random'})">📝 刷</button>
+        <div class="li-actions"><button class="btn btn-ghost btn-sm" onclick="openDeck('${d.id}');startQuiz('${d.id}',{range:'all',types:null,order:'random'})" title="刷题">📝</button>
           <button class="btn fav-on btn-sm" onclick="toggleFav('question','${q.id}',this)" title="取消收藏">⭐</button></div></div>`).join('')+`</div>`;
   }
   v.innerHTML=html;
