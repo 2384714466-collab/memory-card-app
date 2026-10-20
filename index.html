@@ -5028,10 +5028,11 @@ function renderScoreTotal(){
       ${p.totalPass!=null&&p.totalPass!==''?`<div class="st"><div class="n">${p.totalPass}</div><div class="l">总分及格</div></div>`:''}
     </div>`;
   if(!data.length){
-    html+=`<div class="score-empty">还没有已汇总的考卷。<br>需要计划内 <b>全部科目</b> 都登记了同一个「考卷序号」才会汇总。<br>登记时把考卷序号填成一致即可，如「2024年1卷」。</div>`;
+    html+=`<div class="score-empty">还没有已汇总的考卷。</div>`;
   }else{
+    const list=data.slice().reverse();   // 最新汇总记录排在最前
     html+=`<div style="margin-top:14px"><div class="ph">🧾 已汇总卷次明细</div>
-      <div class="paper-list">${data.map(d=>{
+      <div class="paper-list">${list.map(d=>{
         const expr=d.items.map(it=>`<b>${fmtScoreNum(it.score)}</b>（${esc(it.name)}）`).join('<span class="pp-eq">＋</span>')
           +`<span class="pp-eq">＝</span><span class="pp-sum">${fmtScoreNum(d.total)}</span>`;
         const dt=(d._dates&&d._dates.length)?d._dates[0]:'';
