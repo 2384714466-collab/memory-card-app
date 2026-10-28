@@ -20,13 +20,13 @@
     --shadow-md:0 4px 16px rgba(15,23,42,.10);
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%}
+  html,body{height:100%;width:100%;overflow-x:clip}   /* clip 防止意外横向溢出把版面挤偏；老浏览器忽略不影响 */
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
     background:var(--bg); color:var(--text); line-height:1.6;
     -webkit-font-smoothing:antialiased;
   }
-  .app{max-width:760px;margin:0 auto;min-height:100vh;background:var(--bg);
+  .app{max-width:760px;width:100%;margin:0 auto;min-height:100vh;background:var(--bg);
        display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.05)}
   /* top bar */
   .topbar{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--border);
@@ -421,7 +421,7 @@
   .switch.on{background:var(--primary)}
   .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
   .switch.on .knob{left:23px}
-  .modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal-mask{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(15,23,42,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
   .modal-mask.show{display:flex}
   .modal-mask.lvl2{z-index:95}
   .modal{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;max-height:86vh;overflow-y:auto}
@@ -439,7 +439,7 @@
   .li-note{margin-top:4px;font-size:12px;color:var(--text-2);background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:5px 9px;line-height:1.5;word-break:break-word}
 
   /* ===== 底部「更多操作」面板（手机友好的统一入口） ===== */
-  .sheet-mask{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:120;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+  .sheet-mask{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(15,23,42,.4);z-index:120;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   .sheet-mask.show{opacity:1;visibility:visible}
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:121;background:#fff;border-radius:18px 18px 0 0;
     padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .25s;max-height:82vh;overflow-y:auto;
@@ -599,6 +599,12 @@
   .score-head{display:flex;align-items:center;gap:10px;margin:4px 2px 14px;flex-wrap:wrap}
   .score-head h2{font-size:19px;margin:0;flex:1}
   .score-head .back{font-size:13px}
+  /* 分数页头部按钮统一紧凑：行高由标题文字决定，不被按钮撑高 */
+  .score-head .btn{padding:3px 9px;font-size:12px;line-height:1.4;font-weight:600;height:auto;min-height:0}
+  /* 紧凑按钮：与标题同高，不把头部行撑高 */
+  .btn.mini{padding:3px 9px;font-size:12px;line-height:1.4;font-weight:600;height:auto;min-height:0}
+  /* 小节标题行内的按钮压到比标题文字还矮，行高由标题文字决定 */
+  .score-sec .ph .btn.mini{padding:2px 8px;font-size:11.5px;line-height:1.35}
   .score-sec{margin-bottom:18px}
   .score-sec .ph{font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;margin:4px 2px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
   .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
@@ -736,6 +742,8 @@
   /* 移动端：标签横向滚动，避免拥挤；整体更紧凑 */
   body.is-mobile .tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;max-width:62vw}
   body.is-mobile .tabs::-webkit-scrollbar{display:none}
+  /* 标签始终保持单行不换行：窄屏时在 .tabs 内横向滚动，而不是被压成竖排叠字 */
+  .tab{white-space:nowrap;flex-shrink:0}
   body.is-mobile .main{padding:12px}
   body.is-mobile .card{padding:13px}
   body.is-mobile .deck{padding:12px}
@@ -4936,7 +4944,8 @@ function renderScoreSubject(){
   if(!ts.length){
     html+=`<div class="score-empty">还没有「${esc(s.name)}」的测试记录。点「＋ 登记」添加一次测试。</div>`;
   }else{
-    html+=`<div style="margin-top:14px"><div class="ph">🧾 测试记录（${ts.length} 条，点任一条可修改）</div>
+    html+=`<div style="margin-top:14px"><div class="ph"><span>🧾 测试记录（${ts.length} 条）</span>
+        <button class="btn btn-ghost btn-sm mini" onclick="exportSubjectExcel()">⬇ 导出</button></div>
       <div class="test-list">${ts.slice().reverse().map(t=>{
         return `<div class="test-row link" onclick="openTestModal('${t.id}')">
           <span class="t-date">${esc(t.date||'')}</span>
@@ -4948,6 +4957,55 @@ function renderScoreSubject(){
   }
   html+=`</div>`;
   v.innerHTML=html;
+}
+/* —— 导出单科分数记录为 Excel：生成 SpreadsheetML（.xls），Excel / WPS 可直接打开 —— */
+function escXml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function exportSubjectExcel(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const s=planSubjects(p).find(x=>String(x.id)===String(window.__scoreSubjectId)); if(!s)return;
+  const ts=subjTests(p,s.id);
+  if(!ts.length){toast('暂无可导出的记录');return;}
+  const rows=[['日期','科目','考卷序号','分数','备注']].concat(
+    ts.map(t=>[t.date||'',s.name,t.paper||'',+t.score||0,t.note||'']));
+  let xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>'
+    +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+    +'<Worksheet ss:Name="'+escXml(s.name.replace(/[\\\/\?\*\[\]:]/g,'_').slice(0,28))+'"><Table>';
+  rows.forEach(r=>{ xml+='<Row>'+r.map(c=>typeof c==='number'
+      ?'<Cell><Data ss:Type="Number">'+c+'</Data></Cell>'
+      :'<Cell><Data ss:Type="String">'+escXml(c)+'</Data></Cell>').join('')+'</Row>'; });
+  xml+='</Table></Worksheet></Workbook>';
+  const name=[p.name,s.name,todayKey()].map(x=>String(x||'').replace(/[\\\/:\*\?"<>\|\s]+/g,'_')).join('_')+'.xls';
+  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('已导出 '+name);
+}
+/* —— 导出总分记录（各卷各科分数 + 总分）为 Excel —— */
+function exportTotalExcel(){
+  const p=scorePlan(window.__scorePlanId); if(!p)return;
+  const data=totalByPaper(p);
+  if(!data.length){toast('暂无可导出的记录');return;}
+  const subs=planSubjects(p);
+  const head=['考卷序号','日期'].concat(subs.map(s=>s.name)).concat(['总分','明细']);
+  const rows=[head].concat(data.slice().reverse().map(d=>{
+    const map={}; d.items.forEach(it=>{map[it.id]=it.score;});
+    const dt=(d._dates&&d._dates.length)?d._dates[0]:'';
+    const cells=[d.paper,dt].concat(subs.map(s=>map[String(s.id)]!=null?map[String(s.id)]:''))
+      .concat([d.total,d.items.map(it=>`${fmtScoreNum(it.score)}（${it.name}${it.isDef?'·默认':''}）`).join('＋')]);
+    return cells;
+  }));
+  let xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>'
+    +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+    +'<Worksheet ss:Name="总分记录"><Table>';
+  rows.forEach(r=>{ xml+='<Row>'+r.map(c=>typeof c==='number'
+      ?'<Cell><Data ss:Type="Number">'+c+'</Data></Cell>'
+      :'<Cell><Data ss:Type="String">'+escXml(c)+'</Data></Cell>').join('')+'</Row>'; });
+  xml+='</Table></Worksheet></Workbook>';
+  const name=[p.name,'总分',todayKey()].map(x=>String(x||'').replace(/[\\\/:\*\?"<>\|\s]+/g,'_')).join('_')+'.xls';
+  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('已导出 '+name);
 }
 function scoreSubjectHtml(p,s){
   const st=subjStat(p,s.id), ts=subjTests(p,s.id);
@@ -5018,7 +5076,8 @@ function renderScoreTotal(){
   let html=`<div class="score-sec"><div class="score-head">
       <button class="btn btn-ghost btn-sm back" onclick="goBack()">← 返回</button>
       <h2>总分记录</h2>
-      <button class="btn btn-outline btn-sm" onclick="openSubjectManage()">✏️ 编辑</button>
+      <button class="btn btn-ghost btn-sm mini" onclick="exportTotalExcel()">⬇ 导出</button>
+      <button class="btn btn-outline btn-sm mini" onclick="openSubjectManage()">默认分</button>
     </div>`;
   html+=`<div class="score-stats">
       <div class="st"><div class="n">${data.length}</div><div class="l">已汇总卷次</div></div>
@@ -5166,11 +5225,12 @@ function delSubject(id){
 /* —— 测试登记增删改 —— */
 function openTestModal(id,defSubjectId){
   const p=scorePlan(window.__scorePlanId); if(!p)return;
-  const subs=planSubjects(p);
+  const subs=planSubjects(p).filter(s=>!(s.def!=null&&s.def!==''));   // 默认分科目无需登记，不出现在科目选项
   if(!subs.length){toast('请先添加科目');return;}
   const t=id?planTests(p).find(x=>String(x.id)===String(id)):null;
+  const all=planSubjects(p);
   window.__testId=id||null;
-  const opts=subs.map(s=>`<option value="${s.id}" ${((t&&String(t.subjectId)===String(s.id))||(!t&&String(defSubjectId)===String(s.id)))?'selected':''}>${esc(s.name)}</option>`).join('');
+  const opts=(t?all:subs).map(s=>`<option value="${s.id}" ${((t&&String(t.subjectId)===String(s.id))||(!t&&String(defSubjectId)===String(s.id)))?'selected':''}>${esc(s.name)}</option>`).join('');
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-title">${t?'✏️ 编辑测试':'🧪 登记一次测试'}</div>
     <div class="pv-field"><label>科目</label><select id="test-subj" class="pv-input">${opts}</select></div>
