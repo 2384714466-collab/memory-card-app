@@ -4884,7 +4884,7 @@ function scoreLineChart(o){
   vals.forEach((v,i)=>{
     const val=+v.y;
     const dotColor=(passY!=null&&val<passY)?'#ef4444':(targetY!=null&&val>=targetY)?'#22c55e':baseColor;
-    const tip=String(val)+'分'+(v.label?' · '+v.label:'');
+    const tip=String(val)+'分'+((v.tip||v.label)?' · '+(v.tip||v.label):'');   // 悬浮提示优先显示「考卷序号」
     dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(val).toFixed(1)}" r="4" fill="${dotColor}" stroke="#fff" stroke-width="1.5" pointer-events="none"/>`;
     /* 透明大热区（叠在上层）：手机上 4px 圆点太难点中，扩到相邻点间距的一半（上限 11px） */
     const hitR=Math.max(5,Math.min(11,(vals.length>1?(X(1)-X(0)):40)/2));
@@ -5011,7 +5011,8 @@ function scoreSubjectHtml(p,s){
   const st=subjStat(p,s.id), ts=subjTests(p,s.id);
   const chart=scoreLineChart({
     w:pcWide()?960:320,
-    vals:ts.map(t=>({y:+t.score,label:t.date?t.date.slice(5):''})),
+    vals:ts.map(t=>({y:+t.score,label:t.date?t.date.slice(5):'',
+      tip:(t.paper&&t.paper.trim())?t.paper.trim():(t.date||'')})),   // 悬浮：分数 · 考卷序号；无考卷序号则回退日期
     color:p.color||'#6366f1',
     refs:[
       (s.pass!=null&&s.pass!=='')?{y:+s.pass,color:'#16a34a',label:'及格'+s.pass}:null,
